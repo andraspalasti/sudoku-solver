@@ -1,109 +1,103 @@
+import argparse
 import os
+import shutil
+import time
+
 import torch
-import pandas as pd
-import torchvision.transforms as transforms
 import torch.nn.functional as F
-from torch.utils.data import Dataset, DataLoader, ConcatDataset, random_split
+import torchvision.transforms as transforms
+from torch.optim.lr_scheduler import StepLR
+from torch.utils.data import ConcatDataset, DataLoader, random_split
 from torchvision.datasets import FakeData
-from torchvision.ops import generalized_box_iou_loss
-from PIL import Image
+from tqdm import tqdm
+
+from datasets import FakeTarget, PuzzleDataset
 from models import Localizer
 
-
-class FakeLabel():
-    def __init__(self):
-        pass
-
-    def item(self):
-        return torch.tensor([0, 1, 0, 0, 0, 0], dtype=torch.float32)
-
-
-class PuzzleDataset(Dataset):
-    """Sudoku Puzzle dataset."""
-
-    def __init__(self, csv_file, root_dir, transform=None, target_transform=None):
-        """
-        Arguments:
-            csv_file (string): Path to the csv file with annotations.
-            root_dir (string): Directory with all the images.
-            transform (callable, optional): Optional transform to be applied
-                on a sample.
-        """
-        self.puzzles_frame = pd.read_csv(csv_file)
-        self.root_dir = root_dir
-        self.transform = transform
-        self.target_transform = target_transform
-
-    def __len__(self):
-        return len(self.puzzles_frame)
-
-    def __getitem__(self, idx: int):
-        if torch.is_tensor(idx):
-            idx = idx.tolist()
-
-        img_path = os.path.join(self.root_dir,
-                                self.puzzles_frame.iloc[idx, 0])
-        image = Image.open(img_path)
-        scalex, scaley = 224 / image.width, 224 / image.height
-        image = image.resize((224, 224))
-        if self.transform:
-            image = self.transform(image)
-
-        # Because we resized the image we need to resize the bounding points
-        target = self.puzzles_frame.iloc[idx, 1:].values
-        target = target.reshape((4, 2)) * [scalex, scaley]
-        bbox = [target[:,0].min(), target[:,1].min(), target[:,0].max(), target[:,1].max()]
-        if self.target_transform:
-            bbox = self.target_transform(bbox)
-
-        return image, bbox
+parser = argparse.ArgumentParser()
+parser.add_argument('--device', default='cpu',
+                    help='the device that should perform the computations')
+parser.add_argument('--epochs', default=50, type=int, metavar='N', choices=range(1000),
+                    help='number of total epochs to run')
+parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
+                    help='manual epoch number (useful on restarts)')
+parser.add_argument('-b', '--batch-size', default=256, type=int, choices=[2 ** x for x in range(1, 9)],
+                    metavar='N',
+                    help='mini-batch size (default: 256), this is the total '
+                         'batch size of all GPUs on the current node when '
+                         'using Data Parallel or Distributed Data Parallel')
+parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
+                    metavar='LR', help='initial learning rate', dest='lr')
+parser.add_argument('--resume', default='', type=str, metavar='PATH',
+                    help='path to latest checkpoint (default: none)')
 
 
-def loss_fn(outputs, labels):
-    loss = F.binary_cross_entropy(outputs[0], labels[:,:2])
-    loss += F.mse_loss(outputs[1], labels[:, 2:])
-    return loss
+def train(training_loader, model, criterion, optimizer, epoch, device):
 
-def train_one_epoch(model, training_loader: DataLoader, optimizer: torch.optim.Optimizer):
-    running_loss = 0.
-    last_loss = 0.
+    #  Switch to training mode
+    model.train()
 
-    for i, data in enumerate(training_loader):
-        inputs, labels = data
-        inputs, labels = inputs.to('mps'), labels.to('mps')
+    progress = tqdm(training_loader, desc=f'EPOCH {epoch}')
+
+    running_loss = 0.0
+    for i, (images, targets) in enumerate(progress):
+
+        # move data to the same device as model
+        images = images.to(device, non_blocking=True)
+        targets = targets.to(device, non_blocking=True)
+
+        outputs = model(images)
+        loss = criterion(outputs, targets)
 
         optimizer.zero_grad()
-
-        outputs = model(inputs)
-
-        loss = loss_fn(outputs, labels)
         loss.backward()
-
         optimizer.step()
 
-        # Gather data and report
         running_loss += loss.item()
-        if i % 5 == 4:
-            last_loss = running_loss / 5  # loss per batch
-            print(f'  batch {i+1} loss: {last_loss}')
-            running_loss = 0.
+        progress.set_postfix({ 'AvgLoss': running_loss / (i+1) })
 
-    return last_loss
+    return running_loss / (i+1)
+
+
+def validate(val_loader, model, criterion, device):
+        model.eval()
+        running_vloss = 0.0
+        with torch.no_grad():
+            for i, (inputs, targets) in enumerate(val_loader):
+                # move data to the same device as model
+                inputs = inputs.to(device, non_blocking=True)
+                targets = targets.to(device, non_blocking=True)
+
+                voutputs = model(inputs)
+                vloss = criterion(voutputs, targets)
+                running_vloss += vloss
+        return running_vloss / (i+1)
 
 
 def main():
+    args = parser.parse_args()
+
+    #  Loss function
+    def criterion(outputs, targets):
+        loss = F.binary_cross_entropy(outputs[0], targets[:, :2])
+        loss += F.mse_loss(outputs[1], targets[:, 2:])
+        return loss
+
+    device = torch.device(args.device)
+
     model = Localizer()
-    model.to('mps')
+    model.to(device)
 
     dataset = ConcatDataset([
         FakeData(
-          transform=transforms.ToTensor(),
-          target_transform=lambda _: FakeLabel()
+            transform=transforms.ToTensor(),
+            target_transform=lambda _: FakeTarget()
         ),
         PuzzleDataset(
-            'outlines_sorted.csv', 'puzzles',
+            'outlines_sorted.csv',
             transform=transforms.ToTensor(),
-            target_transform=lambda bbox: torch.tensor([1, 0, *bbox], dtype=torch.float32),
+            target_transform=lambda bbox: torch.tensor(
+                [1, 0, *bbox], dtype=torch.float32),
         ),
     ])
 
@@ -111,39 +105,55 @@ def main():
     validation_size = len(dataset) - train_size
     train_set, validation_set = random_split(dataset, [train_size, validation_size])
 
-    training_loader = DataLoader(train_set, batch_size=32, shuffle=True)
-    validation_loader = DataLoader(validation_set, batch_size=32, shuffle=False)
+    training_loader = DataLoader(
+        train_set, batch_size=args.batch_size, shuffle=True, pin_memory=True)
+    validation_loader = DataLoader(
+        validation_set, batch_size=args.batch_size, shuffle=False, pin_memory=True)
 
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    # Sets the learning rate to the initial LR decayed by 10 every 30 epochs
+    scheduler = StepLR(optimizer, step_size=30, gamma=0.1)
+    best_loss = 1 << 32
 
-    EPOCHS = 5
+    if args.resume:
+        if os.path.isfile(args.resume):
+            print(f"=> loading checkpoint '{args.resume}'")
+            checkpoint = torch.load(args.resume)
 
-    for epoch in range(EPOCHS):
-        print(f'EPOCH {epoch+1}:')
+            args.start_epoch = checkpoint['epoch']
+            best_loss = checkpoint['best_loss']
+            model.load_state_dict(checkpoint['state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            scheduler.load_state_dict(checkpoint['scheduler'])
 
-        # Make sure gradient tracking is on, and do a pass over the data
-        model.train(True)
-        avg_loss = train_one_epoch(model, training_loader, optimizer)
+            print(f"=> loaded checkpoint '{args.resume}' (epoch {checkpoint['epoch']})")
+        else:
+            print(f"=> no checkpoint found at: '{args.resume}'")
 
-        running_vloss = 0.0
-        model.eval()
-        with torch.no_grad():
-            for i, vdata in enumerate(validation_loader):
-                vinputs, vlabels = vdata
-                vinputs, vlabels = vinputs.to('mps'), vlabels.to('mps')
-                voutputs = model(vinputs)
-                vloss = loss_fn(voutputs, vlabels)
-                running_vloss += vloss
+    for epoch in range(args.start_epoch, args.epochs):
+        avg_loss = train(training_loader, model, criterion, optimizer, epoch, device)
 
-        avg_vloss = running_vloss / (i + 1)
+        avg_vloss = validate(validation_loader, model, criterion, device)
         print(f'LOSS train {avg_loss} valid {avg_vloss}')
 
-        # Track best performance, and save the model's state
-        # if avg_vloss < best_vloss:
-            # best_vloss = avg_vloss
-            # model_path = 'model_{}_{}'.format(timestamp, epoch_number)
-            # torch.save(model.state_dict(), model_path)
+        is_best = best_loss > avg_vloss
+        best_loss = max(best_loss, avg_vloss)
+
+        scheduler.step()
+        save_checkpoint({
+            'epoch': epoch + 1,
+            'state_dict': model.state_dict(),
+            'best_loss': best_loss,
+            'optimizer': optimizer.state_dict(),
+            'scheduler': scheduler.state_dict()
+        }, is_best)
+
+
+def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
+    torch.save(state, filename)
+    if is_best:
+        shutil.copyfile(filename, 'model_best.pth.tar')
 
 
 if __name__ == '__main__':
