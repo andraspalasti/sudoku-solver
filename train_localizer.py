@@ -11,7 +11,7 @@ from torch.utils.data import ConcatDataset, DataLoader, random_split
 from torchvision.datasets import FakeData
 from tqdm import tqdm
 
-from datasets import FakeTarget, PuzzleDataset
+from datasets import RandomImageDataset, PuzzleDataset
 from models import Localizer
 
 parser = argparse.ArgumentParser()
@@ -27,9 +27,11 @@ parser.add_argument('-b', '--batch-size', default=256, type=int, choices=[2 ** x
                          'batch size of all GPUs on the current node when '
                          'using Data Parallel or Distributed Data Parallel')
 parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
-                    metavar='LR', help='initial learning rate', dest='lr')
+                    metavar='LR', help='initial learning rate', dest='learning_rate')
 parser.add_argument('--resume', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
+parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
+                    help='evaluate model on validation set')
 
 
 def train(training_loader, model, criterion, optimizer, epoch, device):
@@ -89,10 +91,15 @@ def main():
     model.to(device)
 
     dataset = ConcatDataset([
-        FakeData(
-            transform=transforms.ToTensor(),
-            target_transform=lambda _: FakeTarget()
-        ),
+        *([RandomImageDataset(
+            'images',
+            transform=transforms.Compose([
+                transforms.RandomCrop((224, 224)),
+                transforms.ToTensor()
+            ]),
+            target_transform=lambda bbox: torch.tensor(
+                [0, 1, *bbox], dtype=torch.float32),
+        )] * 10),
         PuzzleDataset(
             'outlines_sorted.csv',
             transform=transforms.ToTensor(),
@@ -110,16 +117,16 @@ def main():
     validation_loader = DataLoader(
         validation_set, batch_size=args.batch_size, shuffle=False, pin_memory=True)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
 
-    # Sets the learning rate to the initial LR decayed by 10 every 30 epochs
-    scheduler = StepLR(optimizer, step_size=30, gamma=0.1)
+    # Sets the learning rate to the initial LR decayed by 10 every 80 epochs
+    scheduler = StepLR(optimizer, step_size=80, gamma=0.1)
     best_loss = 1 << 32
 
     if args.resume:
         if os.path.isfile(args.resume):
             print(f"=> loading checkpoint '{args.resume}'")
-            checkpoint = torch.load(args.resume)
+            checkpoint = torch.load(args.resume, map_location=device)
 
             args.start_epoch = checkpoint['epoch']
             best_loss = checkpoint['best_loss']
@@ -130,6 +137,11 @@ def main():
             print(f"=> loaded checkpoint '{args.resume}' (epoch {checkpoint['epoch']})")
         else:
             print(f"=> no checkpoint found at: '{args.resume}'")
+
+    if args.evaluate:
+        avg_vloss = validate(validation_loader, model, criterion, device)
+        print(f'avarage validation loss: {avg_vloss}')
+        return
 
     for epoch in range(args.start_epoch, args.epochs):
         avg_loss = train(training_loader, model, criterion, optimizer, epoch, device)
