@@ -81,7 +81,8 @@ def main():
 
     #  Loss function
     def criterion(outputs, targets):
-        loss = F.binary_cross_entropy(outputs[0], targets[:, :2])
+        # the classification has a big impact too
+        loss = F.binary_cross_entropy(outputs[0], targets[:, :2]) * 1000
         loss += F.mse_loss(outputs[1], targets[:, 2:])
         return loss
 
@@ -117,7 +118,7 @@ def main():
     validation_loader = DataLoader(
         validation_set, batch_size=args.batch_size, shuffle=False, pin_memory=True)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=0.1)
 
     # Sets the learning rate to the initial LR decayed by 10 every 80 epochs
     scheduler = StepLR(optimizer, step_size=80, gamma=0.1)
