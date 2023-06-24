@@ -46,7 +46,7 @@ def main():
             A.Affine(scale=0.8, translate_percent=0.0, rotate=15.0, shear=0),
         ], bbox_params=A.BboxParams('pascal_voc')), args.nrot),
         (A.Compose([
-            A.Affine(scale=0.6, translate_percent=(-0.2, 0.2), rotate=0, shear=0),
+            A.Affine(scale=0.6, translate_percent=(-0.2, 0.2), rotate=0, shear=(-15, 15)),
         ], bbox_params=A.BboxParams('pascal_voc')), args.ntrans),
         (A.Compose([
             A.GaussianBlur(),
