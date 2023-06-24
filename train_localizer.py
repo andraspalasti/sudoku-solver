@@ -95,15 +95,20 @@ def main():
         *([RandomImageDataset(
             'images',
             transform=transforms.Compose([
+                transforms.Grayscale(),
                 transforms.RandomCrop((224, 224)),
-                transforms.ToTensor()
+                transforms.ToTensor(),
+                lambda img: torch.cat((img, img, img))
             ]),
             target_transform=lambda bbox: torch.tensor(
                 [0, 1, *bbox], dtype=torch.float32),
         )] * 10),
         PuzzleDataset(
             'outlines_sorted.csv',
-            transform=transforms.ToTensor(),
+            transform=transforms.Compose([
+                transforms.ToTensor(),
+                lambda img: torch.cat((img, img, img))
+            ]),
             target_transform=lambda bbox: torch.tensor(
                 [1, 0, *bbox], dtype=torch.float32),
         ),
