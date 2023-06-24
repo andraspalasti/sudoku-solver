@@ -106,6 +106,7 @@ def main():
         PuzzleDataset(
             'outlines_sorted.csv',
             transform=transforms.Compose([
+                transforms.Grayscale(),
                 transforms.ToTensor(),
                 lambda img: torch.cat((img, img, img))
             ]),
