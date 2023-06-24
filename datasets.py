@@ -28,6 +28,12 @@ class RandomImageDataset(Dataset):
     def __getitem__(self, idx: int):
         img_path = self.images[idx]
         image = Image.open(img_path)
+        image = image.convert('RGB')
+
+        min_size = min(image.width, image.height)
+        if min_size < 224:
+            scale = 224 / min_size
+            image = image.resize((round(image.width * scale), round(image.height * scale)))
 
         #  No sudoku on image so it does not have a bounding box
         target = [0, 0, 0, 0]
