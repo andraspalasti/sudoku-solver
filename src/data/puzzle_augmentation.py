@@ -1,5 +1,4 @@
 import argparse
-import os
 from pathlib import Path
 
 import albumentations as A
@@ -11,7 +10,7 @@ import pandas as pd
 parser = argparse.ArgumentParser()
 parser.add_argument('--csv', default='data/outlines_sorted.csv',
                     help='path to csv that contains the images to be augmented')
-parser.add_argument('-o', '--out-dir', default='data/puzzles',
+parser.add_argument('-o', '--out-dir', default='puzzles',
                     help='output directory to put transformed images in')
 parser.add_argument('--nrot', type=int, default=1,
                     help='number of rotations to perform')
@@ -75,9 +74,9 @@ def main():
 
     offset = len(df)
     for i, new_row in enumerate(new_rows):
-        img_path = os.path.join(args.out_dir, f'transformed{i}.jpg')
-        cv2.imwrite(img_path, img=new_row[0])
-        new_row[0] = img_path
+        img_path = Path(args.out_dir) / f'transformed{i}.jpg'
+        cv2.imwrite(str(csv_dir / img_path), img=new_row[0])
+        new_row[0] = str(img_path)
         df.loc[offset+i] = new_row
 
     df.to_csv(args.csv, index=False)
