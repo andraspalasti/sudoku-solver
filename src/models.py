@@ -6,45 +6,42 @@ import torch.nn as nn
 from torchvision.models import MobileNetV2
 
 
-class Localizer(nn.Module):
+class Localizer(MobileNetV2):
+    """Classifier and localizer for a sudoku puzzle, based on the MobileNetV2 architecture."""
     def __init__(self):
-        super().__init__()
-        out_dim = 1000
-        self.classifier = MobileNetV2(num_classes=out_dim)
+        # The classifier has one output which is a probability that 
+        # indicates whether a sudoku is present or not
+        super().__init__(num_classes=1)
 
-        self.is_present = nn.Sequential(
-            nn.ReLU(inplace=True),
-            nn.Linear(out_dim, 2),
-            nn.Softmax(dim=1)
-        )
-
-        self.location = nn.Sequential(
-            nn.ReLU(),
-            nn.Linear(out_dim, 4),
+        # The localization part has four outputs: x1, y1, x2, y2 
+        # the corners of the bounding box
+        self.localization = nn.Sequential(
+            # nn.ReLU(),
+            nn.Linear(self.last_channel, 4),
             nn.ReLU(inplace=True)
         )
 
-        modules = chain(self.is_present.modules(), self.location.modules())
-        for m in modules:
+        for m in self.localization.modules():
             if isinstance(m, nn.Linear):
                 nn.init.normal_(m.weight, 0, 0.01)
                 nn.init.zeros_(m.bias)
 
 
-    def forward(self, x):
-        out = self.classifier.forward(x)
-        is_present = self.is_present(out)
-        location = self.location(out)
-        # is_present = torch.nn.functional.softmax(out[:, :2], dim=1)
-        # location = torch.nn.functional.relu(out[:, 2:])
-        return is_present, location
+    def forward(self, x: torch.Tensor):
+        x = self.features(x)
+        x = nn.functional.adaptive_avg_pool2d(x, (1, 1))
+        x = torch.flatten(x, 1)
+
+        classification = nn.functional.sigmoid(self.classifier(x))
+        localization = self.localization(x)
+
+        return classification, localization
 
 
 if __name__ == '__main__':
-    input = torch.randn((1, 3, 224, 224)).to("cpu")
+    input = torch.randn((1, 3, 224, 224))
 
     model = Localizer()
-    model.to("cpu")
     model.eval()
 
     num_params = sum(param.numel() for param in model.parameters())

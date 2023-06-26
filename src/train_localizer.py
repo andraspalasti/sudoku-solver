@@ -82,13 +82,13 @@ def main():
     #  Loss function
     def criterion(outputs, targets: torch.Tensor):
         # the classification has a big impact too
-        loss = F.binary_cross_entropy(outputs[0], targets[:, :2]) * 1000
+        loss = F.binary_cross_entropy(outputs[0], targets[:, :1]) * 1000
 
         # images that does not have sudokus in it, should not have impact on the localizer
         # so we only compute loss for the images that contain sudokus
-        present = torch.tensor([1, 0], dtype=torch.float32, device=device)
-        ixs = torch.all(targets[:, :2] == present, dim=1)
-        loss += F.mse_loss(outputs[1][ixs], targets[ixs, 2:])
+        present = torch.tensor([1], dtype=torch.float32, device=device)
+        ixs = torch.all(targets[:, :1] == present, dim=1)
+        loss += F.mse_loss(outputs[1][ixs], targets[ixs, 1:])
 
         return loss
 
@@ -105,7 +105,7 @@ def main():
                 lambda img: torch.cat((img, img, img))
             ]),
             target_transform=lambda bbox: torch.tensor(
-                [0, 1, *bbox], dtype=torch.float32),
+                [0, *bbox], dtype=torch.float32),
         )] * 10),
         PuzzleDataset(
             csv_file='data/outlines_sorted.csv',
@@ -116,7 +116,7 @@ def main():
                 lambda img: torch.cat((img, img, img))
             ]),
             target_transform=lambda bbox: torch.tensor(
-                [1, 0, *bbox], dtype=torch.float32),
+                [1, *bbox], dtype=torch.float32),
         ),
     ])
 
