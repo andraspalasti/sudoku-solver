@@ -28,6 +28,7 @@ def main():
 
         image = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         image = cv2.GaussianBlur(image, (5, 5), 0)
+        # topx, topy = 0, 0
         topy, topx = (image.shape[0] - 500) // 2, (image.shape[1] - 500) // 2
         image = image[topy:topy+500, topx:topx+500]
         scaley, scalex = image.shape[0] / 224, image.shape[1] / 224 
@@ -38,7 +39,7 @@ def main():
         input = input / 255
 
         probs, bbox = model(input.unsqueeze(dim=0))
-        bbox[0, ::2] = bbox[0, ::2] * scalex
+        bbox[0, ::2] = bbox[0, ::2] * scalex 
         bbox[0, 1::2] = bbox[0, 1::2] * scaley
         bbox = bbox[0].tolist()
         present_prob = round(probs[0, 0].item() * 100)
