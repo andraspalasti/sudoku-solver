@@ -3,13 +3,13 @@ from itertools import chain
 
 import torch
 import torch.nn as nn
-from torchvision.models import mobilenet_v3_small, mobilenet_v3_large, MobileNetV2
+from torchvision.models import MobileNetV2
 
 
 class Localizer(nn.Module):
     def __init__(self):
         super().__init__()
-        out_dim = 6
+        out_dim = 1000
         self.classifier = MobileNetV2(num_classes=out_dim)
 
         self.is_present = nn.Sequential(
