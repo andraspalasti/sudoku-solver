@@ -77,14 +77,20 @@ def validate(val_loader, model, criterion, device):
 def main():
     args = parser.parse_args()
 
+    device = torch.device(args.device)
+
     #  Loss function
-    def criterion(outputs, targets):
+    def criterion(outputs, targets: torch.Tensor):
         # the classification has a big impact too
         loss = F.binary_cross_entropy(outputs[0], targets[:, :2]) * 1000
-        loss += F.mse_loss(outputs[1], targets[:, 2:])
-        return loss
 
-    device = torch.device(args.device)
+        # images that does not have sudokus in it, should not have impact on the localizer
+        # so we only compute loss for the images that contain sudokus
+        present = torch.tensor([1, 0], dtype=torch.float32, device=device)
+        ixs = torch.all(targets[:, :2] == present, dim=1)
+        loss += F.mse_loss(outputs[1][ixs], targets[ixs, 2:])
+
+        return loss
 
     model = Localizer()
     model.to(device)
@@ -114,7 +120,7 @@ def main():
         ),
     ])
 
-    train_size = int(len(dataset) * 0.9)
+    train_size = int(len(dataset) * 0.8)
     validation_size = len(dataset) - train_size
     train_set, validation_set = random_split(dataset, [train_size, validation_size])
 
