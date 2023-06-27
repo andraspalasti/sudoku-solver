@@ -28,7 +28,7 @@ class RandomImageDataset(Dataset):
     def __getitem__(self, idx: int):
         img_path = self.images[idx]
         image = Image.open(img_path)
-        image = image.convert('RGB')
+        # image = image.convert('RGB')
 
         min_size = min(image.width, image.height)
         if min_size < 400:

@@ -51,7 +51,7 @@ def main():
             A.Affine(scale=0.6, translate_percent=(-0.1, 0.3), rotate=0, shear=(-5, 5), always_apply=True),
         ], bbox_params=A.BboxParams('pascal_voc')), args.ntrans),
         (A.Compose([
-            A.ColorJitter(brightness=0.4, contrast=0, saturation=0, hue=0, always_apply=True),
+            A.ColorJitter(brightness=(1.0, 1.5), contrast=0, saturation=0, hue=0, always_apply=True),
             A.GaussianBlur(blur_limit=(3, 5), always_apply=True),
         ], bbox_params=A.BboxParams('pascal_voc')), args.nblur),
     ]

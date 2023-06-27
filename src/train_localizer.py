@@ -102,7 +102,6 @@ def main():
                 transforms.Grayscale(),
                 transforms.RandomCrop((400, 400)),
                 transforms.ToTensor(),
-                lambda img: torch.cat((img, img, img))
             ]),
             target_transform=lambda bbox: torch.tensor(
                 [0, *bbox], dtype=torch.float32),
@@ -113,7 +112,6 @@ def main():
             transform=transforms.Compose([
                 transforms.Grayscale(),
                 transforms.ToTensor(),
-                lambda img: torch.cat((img, img, img))
             ]),
             target_transform=lambda bbox: torch.tensor(
                 [1, *bbox], dtype=torch.float32),
@@ -131,8 +129,8 @@ def main():
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=0.1)
 
-    # Sets the learning rate to the initial LR decayed by 10 every 400 epochs
-    scheduler = StepLR(optimizer, step_size=400, gamma=0.1)
+    # Sets the learning rate to the initial LR decayed by 10 every 300 epochs
+    scheduler = StepLR(optimizer, step_size=300, gamma=0.1)
     best_loss = 1 << 32
 
     if args.resume:

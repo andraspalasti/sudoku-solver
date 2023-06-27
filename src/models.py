@@ -3,6 +3,7 @@ import time
 import torch
 import torch.nn as nn
 from torchvision.models import mobilenet_v3_small
+from torchvision.models.mobilenetv2 import InvertedResidual
 
 
 class Localizer(nn.Module):
@@ -11,31 +12,41 @@ class Localizer(nn.Module):
     def __init__(self):
         super().__init__()
 
+        self.pre = nn.Sequential(
+            nn.Conv2d(in_channels=1, out_channels=3, kernel_size=3, padding=1),
+            nn.BatchNorm2d(num_features=3),
+            nn.ReLU(inplace=True)
+        )
+
         # The classifier has one output which is a probability that 
         # indicates whether a sudoku is present or not
         self.mobilenet = mobilenet_v3_small(num_classes=1)
-
-        last_out_channels = -1
-        for m in self.mobilenet.features.modules():
-            if isinstance(m, nn.Conv2d):
-                last_out_channels = m.out_channels
-
+        last_out_channels = [m.out_channels for m in self.mobilenet.modules()
+                             if isinstance(m, nn.Conv2d)][-1]
 
         # The localization part has four outputs: x1, y1, x2, y2 
         # the corners of the bounding box
         self.localization = nn.Sequential(
-            # nn.ReLU(),
             nn.Linear(last_out_channels, 4),
             nn.ReLU(inplace=True)
         )
 
-        for m in self.localization.modules():
-            if isinstance(m, nn.Linear):
+        # weight initialization
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode="fan_out")
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
+            elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
+                nn.init.ones_(m.weight)
+                nn.init.zeros_(m.bias)
+            elif isinstance(m, nn.Linear):
                 nn.init.normal_(m.weight, 0, 0.01)
                 nn.init.zeros_(m.bias)
 
 
     def forward(self, x: torch.Tensor):
+        x = self.pre(x)
         x = self.mobilenet.features(x)
 
         x = self.mobilenet.avgpool(x)
@@ -47,7 +58,7 @@ class Localizer(nn.Module):
 
 
 if __name__ == '__main__':
-    input = torch.randn((1, 3, 400, 400))
+    input = torch.randn((1, 1, 400, 400))
 
     model = Localizer()
     model.eval()
