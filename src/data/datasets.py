@@ -31,8 +31,8 @@ class RandomImageDataset(Dataset):
         image = image.convert('RGB')
 
         min_size = min(image.width, image.height)
-        if min_size < 224:
-            scale = 224 / min_size
+        if min_size < 400:
+            scale = 400 / min_size
             image = image.resize((round(image.width * scale), round(image.height * scale)))
 
         #  No sudoku on image so it does not have a bounding box
@@ -68,8 +68,8 @@ class PuzzleDataset(Dataset):
         #  Resize image to appropriate size
         img_path = self.root_dir / self.puzzles_frame.iloc[idx, 0]
         image = Image.open(str(img_path))
-        scalex, scaley = 224 / image.width, 224 / image.height
-        image = image.resize((224, 224))
+        scalex, scaley = 400 / image.width, 400 / image.height
+        image = image.resize((400, 400))
 
         #  Adjust bounding box to resized image
         target = self.puzzles_frame.iloc[idx, 1:].values

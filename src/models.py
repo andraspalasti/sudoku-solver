@@ -1,23 +1,31 @@
 import time
-from itertools import chain
 
 import torch
 import torch.nn as nn
-from torchvision.models import MobileNetV2
+from torchvision.models import mobilenet_v3_small
 
 
-class Localizer(MobileNetV2):
-    """Classifier and localizer for a sudoku puzzle, based on the MobileNetV2 architecture."""
+class Localizer(nn.Module):
+    """Classifier and localizer for a sudoku puzzle, based on the MobileNetV3 architecture."""
+
     def __init__(self):
+        super().__init__()
+
         # The classifier has one output which is a probability that 
         # indicates whether a sudoku is present or not
-        super().__init__(num_classes=1)
+        self.mobilenet = mobilenet_v3_small(num_classes=1)
+
+        last_out_channels = -1
+        for m in self.mobilenet.features.modules():
+            if isinstance(m, nn.Conv2d):
+                last_out_channels = m.out_channels
+
 
         # The localization part has four outputs: x1, y1, x2, y2 
         # the corners of the bounding box
         self.localization = nn.Sequential(
             # nn.ReLU(),
-            nn.Linear(self.last_channel, 4),
+            nn.Linear(last_out_channels, 4),
             nn.ReLU(inplace=True)
         )
 
@@ -28,18 +36,18 @@ class Localizer(MobileNetV2):
 
 
     def forward(self, x: torch.Tensor):
-        x = self.features(x)
-        x = nn.functional.adaptive_avg_pool2d(x, (1, 1))
+        x = self.mobilenet.features(x)
+
+        x = self.mobilenet.avgpool(x)
         x = torch.flatten(x, 1)
 
-        classification = nn.functional.sigmoid(self.classifier(x))
+        classification = nn.functional.sigmoid(self.mobilenet.classifier(x))
         localization = self.localization(x)
-
         return classification, localization
 
 
 if __name__ == '__main__':
-    input = torch.randn((1, 3, 224, 224))
+    input = torch.randn((1, 3, 400, 400))
 
     model = Localizer()
     model.eval()

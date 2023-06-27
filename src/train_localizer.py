@@ -100,7 +100,7 @@ def main():
             'data/images',
             transform=transforms.Compose([
                 transforms.Grayscale(),
-                transforms.RandomCrop((224, 224)),
+                transforms.RandomCrop((400, 400)),
                 transforms.ToTensor(),
                 lambda img: torch.cat((img, img, img))
             ]),
