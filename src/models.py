@@ -3,7 +3,6 @@ import time
 import torch
 import torch.nn as nn
 from torchvision.models import mobilenet_v3_small
-from torchvision.models.mobilenetv2 import InvertedResidual
 
 
 class Localizer(nn.Module):
