@@ -65,8 +65,9 @@ if __name__ == '__main__':
     num_params = sum(param.numel() for param in model.parameters())
     print(f'params: {num_params}')
 
-    start = time.perf_counter_ns()
-    is_present, location = model(input)
-    end = time.perf_counter_ns()
+    with torch.no_grad():
+        start = time.perf_counter_ns()
+        is_present, location = model(input)
+        end = time.perf_counter_ns()
     print(f'is_present: {is_present.shape} location: {location.shape}')
     print(f'{( end - start ) * 1e-6}ms')

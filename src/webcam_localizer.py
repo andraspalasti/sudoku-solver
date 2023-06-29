@@ -38,7 +38,9 @@ def main():
         # input = torch.cat((input, input, input))
         input = input / 255
 
-        probs, bbox = model(input.unsqueeze(dim=0))
+        with torch.no_grad():
+            probs, bbox = model(input.unsqueeze(dim=0))
+
         bbox[0, ::2] = bbox[0, ::2] * scalex 
         bbox[0, 1::2] = bbox[0, 1::2] * scaley
         bbox = bbox[0].tolist()
