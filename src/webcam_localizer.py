@@ -11,7 +11,7 @@ def main():
     model.eval()
 
     # Load weights
-    checkpoint = torch.load('models/model_bestV3_2.pth.tar', map_location=device)
+    checkpoint = torch.load('models/model_bestV3.pth.tar', map_location=device)
     model.load_state_dict(checkpoint['state_dict'])
 
     cv2.namedWindow("preview")
