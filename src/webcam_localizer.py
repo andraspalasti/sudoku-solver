@@ -1,3 +1,5 @@
+import time
+
 import cv2
 import torch
 
@@ -27,19 +29,22 @@ def main():
         rval, frame = vc.read()
 
         image = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        # image = cv2.GaussianBlur(image, (5, 5), 0)
+        image = cv2.GaussianBlur(image, (5, 5), 0)
         topx, topy = 0, 0
-        topy, topx = (image.shape[0] - 500) // 2, (image.shape[1] - 500) // 2
-        image = image[topy:topy+500, topx:topx+500]
+        topy, topx = (image.shape[0] - 700) // 2, (image.shape[1] - 700) // 2
+        image = image[topy:topy+700, topx:topx+700]
         scaley, scalex = image.shape[0] / 400, image.shape[1] / 400 
         image = cv2.resize(image, (400, 400))
 
         input = torch.tensor(image, dtype=torch.float32, device=device).unsqueeze(dim=0)
-        # input = torch.cat((input, input, input))
         input = input / 255
 
         with torch.no_grad():
+            start = time.perf_counter_ns()
             probs, bbox = model(input.unsqueeze(dim=0))
+            end = time.perf_counter_ns()
+
+        print(f'Time to run inference: {(end - start) * 1e-6}ms'.ljust(50), end='\r')
 
         bbox[0, ::2] = bbox[0, ::2] * scalex 
         bbox[0, 1::2] = bbox[0, 1::2] * scaley
@@ -49,7 +54,7 @@ def main():
         x2, y2 = int(topx + bbox[2]), int(topy + bbox[3])
 
         frame = cv2.rectangle(frame, (x1, y1), (x2, y2), color=(0, 0, 255), thickness=3)
-        frame = cv2.rectangle(frame, (topx, topy), (topx+500, topy+500), color=(0, 255, 0), thickness=3)
+        frame = cv2.rectangle(frame, (topx, topy), (topx+700, topy+700), color=(0, 255, 0), thickness=3)
         frame = cv2.putText(frame, f'{present_prob}%', org=(x1+10, y1+20),
                             fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5, thickness=2, color=(0, 0, 255))
 
