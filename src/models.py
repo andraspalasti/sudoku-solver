@@ -2,7 +2,7 @@ import time
 
 import torch
 import torch.nn as nn
-from torchvision.models import mobilenet_v3_small
+from torchvision.models import MobileNetV2
 
 
 class Localizer(nn.Module):
@@ -19,7 +19,7 @@ class Localizer(nn.Module):
 
         # The classifier has one output which is a probability that 
         # indicates whether a sudoku is present or not
-        self.mobilenet = mobilenet_v3_small(num_classes=1)
+        self.mobilenet = MobileNetV2(num_classes=1)
         last_out_channels = [m.out_channels for m in self.mobilenet.modules()
                              if isinstance(m, nn.Conv2d)][-1]
 
@@ -48,7 +48,7 @@ class Localizer(nn.Module):
         x = self.pre(x)
         x = self.mobilenet.features(x)
 
-        x = self.mobilenet.avgpool(x)
+        x = nn.functional.adaptive_avg_pool2d(x, (1, 1))
         x = torch.flatten(x, 1)
 
         classification = nn.functional.sigmoid(self.mobilenet.classifier(x))
@@ -57,7 +57,7 @@ class Localizer(nn.Module):
 
 
 if __name__ == '__main__':
-    input = torch.randn((1, 1, 400, 400))
+    input = torch.randn((1, 1, 224, 224))
 
     model = Localizer()
     model.eval()
