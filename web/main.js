@@ -12,7 +12,7 @@ let sudokuOutline = document.querySelector('div.outline');
 
 // Initalize localizer model
 let session = null;
-ort.InferenceSession.create('/localizer.ort', {})
+ort.InferenceSession.create('/localizer.with_runtime_opt.ort', {executionProviders: ['webgl']})
     .then((sess) => { session = sess; })
     .catch((e) => {
         alert('Could not load localizer model.');
@@ -34,7 +34,7 @@ navigator.mediaDevices.getUserMedia({
 
 
 // The width and height of the input image required by the model
-const WIDTH = 400, HEIGHT = 400;
+const WIDTH = 224, HEIGHT = 224;
 let canvas = document.createElement('canvas');
 canvas.width = WIDTH;
 canvas.height = HEIGHT;
@@ -58,7 +58,7 @@ async function processFrame() {
     cv.cvtColor(mat, mat, cv.COLOR_RGB2GRAY);
     mat.convertTo(mat, cv.CV_32F, 1. / 255);
     
-    const input = new ort.Tensor('float32', mat.data32F, [1, HEIGHT, WIDTH]);
+    const input = new ort.Tensor('float32', mat.data32F, [1, 1, HEIGHT, WIDTH]);
     const { classification, localization } = await session.run({ input });
 
     const sudokuPresent = 0.9 < classification.data[0];
@@ -66,7 +66,7 @@ async function processFrame() {
         let [x1, y1, x2, y2] = localization.data;
         let scaleX = video.clientWidth / WIDTH, scaleY = video.clientHeight / HEIGHT;
 
-        let padding = 20;
+        let padding = 10;
         sudokuOutline.style.top = y1 * scaleY - padding + 'px';
         sudokuOutline.style.left = x1 * scaleX - padding + 'px';
         sudokuOutline.style.width = (x2 - x1) * scaleX + padding * 2 + 'px';
