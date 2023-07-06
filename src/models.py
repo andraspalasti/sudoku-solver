@@ -3,11 +3,10 @@ import time
 import torch
 import torch.nn as nn
 from torchvision.models import MobileNetV2
-from torchvision.models.mobilenetv2 import InvertedResidual
 
 
 class Localizer(nn.Module):
-    """Classifier and localizer for a sudoku puzzle, based on the MobileNetV3 architecture."""
+    """Classifier and localizer for a sudoku puzzle, based on the MobileNetV2 architecture."""
 
     def __init__(self):
         super().__init__()
@@ -66,8 +65,9 @@ if __name__ == '__main__':
     num_params = sum(param.numel() for param in model.parameters())
     print(f'params: {num_params}')
 
-    start = time.perf_counter_ns()
-    is_present, location = model(input)
-    end = time.perf_counter_ns()
+    with torch.no_grad():
+        start = time.perf_counter_ns()
+        is_present, location = model(input)
+        end = time.perf_counter_ns()
     print(f'is_present: {is_present.shape} location: {location.shape}')
     print(f'{( end - start ) * 1e-6}ms')
