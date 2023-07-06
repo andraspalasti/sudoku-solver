@@ -15,7 +15,7 @@ from models import Localizer
 parser = argparse.ArgumentParser()
 parser.add_argument('--device', default='cpu',
                     help='the device that should perform the computations')
-parser.add_argument('--epochs', default=50, type=int, metavar='N', choices=range(1000),
+parser.add_argument('--epochs', default=50, type=int, metavar='N', choices=range(10000),
                     help='number of total epochs to run')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                     help='manual epoch number (useful on restarts)')
@@ -100,7 +100,7 @@ def main():
             'data/images',
             transform=transforms.Compose([
                 transforms.Grayscale(),
-                transforms.RandomCrop((400, 400)),
+                transforms.RandomCrop((224, 224)),
                 transforms.ToTensor(),
             ]),
             target_transform=lambda bbox: torch.tensor(
