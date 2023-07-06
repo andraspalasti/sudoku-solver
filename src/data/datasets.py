@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import pandas as pd
-from PIL import Image
+from PIL import Image, ImageOps
 from torch.utils.data import Dataset
 
 
@@ -28,7 +28,6 @@ class RandomImageDataset(Dataset):
     def __getitem__(self, idx: int):
         img_path = self.images[idx]
         image = Image.open(img_path)
-        # image = image.convert('RGB')
 
         min_size = min(image.width, image.height)
         if min_size < 224:
@@ -65,13 +64,15 @@ class PuzzleDataset(Dataset):
         return len(self.puzzles_frame)
 
     def __getitem__(self, idx: int):
-        #  Resize image to appropriate size
+        # Resize image to appropriate size
         img_path = self.root_dir / self.puzzles_frame.iloc[idx, 0]
         image = Image.open(str(img_path))
+        image = ImageOps.exif_transpose(image)
         scalex, scaley = 224 / image.width, 224 / image.height
         image = image.resize((224, 224))
 
-        #  Adjust bounding box to resized image
+        # Adjust bounding box to resized image
+        # Bounding box is returned in the format: [x1, y1, x2, y2]
         target = self.puzzles_frame.iloc[idx, 1:].values
         target = target.reshape((4, 2)) * [scalex, scaley]
         bbox = [target[:, 0].min(), target[:, 1].min(),
