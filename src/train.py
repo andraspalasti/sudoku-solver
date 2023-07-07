@@ -9,16 +9,16 @@ from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import ConcatDataset, DataLoader, random_split
 from tqdm import tqdm
 
-from data.datasets import RandomImageDataset, PuzzleDataset
-from models import Localizer
+from data.datasets import RandomImageDataset, PuzzleDataset, MyMNIST
+from models import Localizer, DigitClassifier
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--device', default='cpu',
                     help='the device that should perform the computations')
+parser.add_argument('--model', default='digitclassifier', choices=['localizer', 'digitclassifier'],
+                    help='the model that should be trained')
 parser.add_argument('--epochs', default=50, type=int, metavar='N', choices=range(10000),
                     help='number of total epochs to run')
-parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
-                    help='manual epoch number (useful on restarts)')
 parser.add_argument('-b', '--batch-size', default=256, type=int, choices=[2 ** x for x in range(1, 9)],
                     metavar='N',
                     help='mini-batch size (default: 256), this is the total '
@@ -33,7 +33,6 @@ parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
 
 
 def train(training_loader, model, criterion, optimizer, epoch, device):
-
     #  Switch to training mode
     model.train()
 
@@ -74,24 +73,7 @@ def validate(val_loader, model, criterion, device):
         return running_vloss / (i+1)
 
 
-def main():
-    args = parser.parse_args()
-
-    device = torch.device(args.device)
-
-    #  Loss function
-    def criterion(outputs, targets: torch.Tensor):
-        # the classification has a big impact too
-        loss = F.binary_cross_entropy(outputs[0], targets[:, :1]) * 1000
-
-        # images that does not have sudokus in it, should not have impact on the localizer
-        # so we only compute loss for the images that contain sudokus
-        present = torch.tensor([1], dtype=torch.float32, device=device)
-        ixs = torch.all(targets[:, :1] == present, dim=1)
-        loss += F.mse_loss(outputs[1][ixs], targets[ixs, 1:])
-
-        return loss
-
+def get_localizer(device):
     model = Localizer()
     model.to(device)
 
@@ -117,10 +99,50 @@ def main():
                 [1, *bbox], dtype=torch.float32),
         ),
     ])
-
     train_size = int(len(dataset) * 0.8)
     validation_size = len(dataset) - train_size
     train_set, validation_set = random_split(dataset, [train_size, validation_size])
+
+    #  Loss function
+    def criterion(outputs, targets: torch.Tensor):
+        # the classification has a big impact too
+        loss = F.binary_cross_entropy(outputs[0], targets[:, :1]) * 1000
+
+        # images that does not have sudokus in it, should not have impact on the localizer
+        # so we only compute loss for the images that contain sudokus
+        present = torch.tensor([1], dtype=torch.float32, device=device)
+        ixs = torch.all(targets[:, :1] == present, dim=1)
+        loss += F.mse_loss(outputs[1][ixs], targets[ixs, 1:])
+        return loss
+
+    return model, train_set, validation_set, criterion
+
+
+def get_digit_classifier(device):
+    model = DigitClassifier()
+    model.to(device)
+
+    t = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.RandomAffine(degrees=15, translate=(0.3, 0.3))
+    ])
+    train_set = MyMNIST('data', train=True, transform=t)
+    validation_set = MyMNIST('data', train=False, transform=t)
+
+    #  Loss function
+    def criterion(logits: torch.Tensor, targets: torch.Tensor):
+        return F.nll_loss(logits, targets)
+
+    return model, train_set, validation_set, criterion
+
+def main():
+    args = parser.parse_args()
+
+    device = torch.device(args.device)
+    if args.model == 'localizer':
+        model, train_set, validation_set, criterion = get_localizer(device)
+    else:
+        model, train_set, validation_set, criterion = get_digit_classifier(device)
 
     training_loader = DataLoader(
         train_set, batch_size=args.batch_size, shuffle=True, pin_memory=True)
@@ -133,12 +155,13 @@ def main():
     scheduler = StepLR(optimizer, step_size=300, gamma=0.1)
     best_loss = 1 << 32
 
+    start_epoch = 0
     if args.resume:
         if os.path.isfile(args.resume):
             print(f"=> loading checkpoint '{args.resume}'")
             checkpoint = torch.load(args.resume, map_location=device)
 
-            args.start_epoch = checkpoint['epoch']
+            start_epoch = checkpoint['epoch']
             best_loss = checkpoint['best_loss']
             model.load_state_dict(checkpoint['state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer'])
@@ -153,7 +176,7 @@ def main():
         print(f'avarage validation loss: {avg_vloss}')
         return
 
-    for epoch in range(args.start_epoch, args.epochs):
+    for epoch in range(start_epoch, args.epochs):
         avg_loss = train(training_loader, model, criterion, optimizer, epoch, device)
 
         avg_vloss = validate(validation_loader, model, criterion, device)

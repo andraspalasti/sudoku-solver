@@ -1,8 +1,43 @@
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 from PIL import Image, ImageOps
 from torch.utils.data import Dataset
+from torchvision.datasets import MNIST
+
+
+class MyMNIST(Dataset):
+    """
+    Same as the MNIST dataset except that the images that have a label that is zero are blank, 
+    beacuse is sudokus empty cells are interpreted as zeros.
+    """
+
+    def __init__(self, root: str, train = True, transform = None, target_transform = None):
+        self.dataset = MNIST(root, train, download=True)
+        self.transform = transform
+        self.target_transform = target_transform
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, idx: int):
+        img, target = self.dataset[idx]
+        if target == 0:
+            img = np.zeros((img.height, img.width), dtype=np.uint8)
+            
+            # Add some noise to the image
+            cnt = np.random.randint(0, img.shape[0] * img.shape[1] // 32)
+            xs, ys = np.random.random_integers(0, img.shape[0] - 1, size=(2, cnt))
+            img[ys, xs] = 255
+
+        if self.transform:
+            img = self.transform(img)
+
+        if self.target_transform:
+            target = self.target_transform(target)
+
+        return img, target
 
 
 class RandomImageDataset(Dataset):

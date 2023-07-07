@@ -1,0 +1,8 @@
+# MNIST dataset
+MNIST/
+
+# Sudoku images
+puzzles/
+
+# Random images
+images/
