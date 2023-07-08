@@ -1,6 +1,7 @@
 import argparse
 import os
 import shutil
+from pathlib import Path 
 
 import torch
 import torch.nn.functional as F
@@ -32,6 +33,9 @@ parser.add_argument('--resume', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
 parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
                     help='evaluate model on validation set')
+
+
+DATA_DIR = (Path(__file__).parent / '..' / 'data').resolve()
 
 
 def train(training_loader, model, loss_fn, optimizer, epoch, device):
@@ -81,7 +85,7 @@ def get_localizer(device):
 
     dataset = ConcatDataset([
         *([RandomImageDataset(
-            'data/images',
+            str(DATA_DIR / 'images'),
             transform=transforms.Compose([
                 transforms.Grayscale(),
                 transforms.RandomCrop((224, 224)),
@@ -91,8 +95,8 @@ def get_localizer(device):
                 [0, *bbox], dtype=torch.float32),
         )] * 10),
         PuzzleDataset(
-            csv_file='data/outlines_sorted.csv',
-            root_dir='data',
+            csv_file=str(DATA_DIR / 'outlines_sorted.csv'),
+            root_dir=str(DATA_DIR),
             transform=transforms.Compose([
                 transforms.Grayscale(),
                 transforms.ToTensor(),
@@ -126,10 +130,12 @@ def get_digit_classifier(device):
 
     t = transforms.Compose([
         transforms.ToTensor(),
-        transforms.RandomAffine(degrees=15, translate=(0.3, 0.3))
+        transforms.RandomAffine(degrees=15, translate=(0.3, 0.3), scale=(0.5, 0.75)),
+        transforms.ColorJitter(brightness=0.4, contrast=0.4),
+        transforms.RandomAdjustSharpness(1.4)
     ])
-    train_set = MyMNIST('data', train=True, transform=t)
-    validation_set = MyMNIST('data', train=False, transform=t)
+    train_set = MyMNIST(str(DATA_DIR), train=True, transform=t)
+    validation_set = MyMNIST(str(DATA_DIR), train=False, transform=t)
 
     #  Loss function
     def criterion(probs: torch.Tensor, targets: torch.Tensor):
