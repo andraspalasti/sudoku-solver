@@ -1,7 +1,8 @@
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useState, useCallback, useContext } from 'react';
 import * as cv from '@techstark/opencv-js';
 import * as ort from 'onnxruntime-web';
 import './Localizer.css'
+import { ORTContext } from './App';
 
 const HEIGHT = 224, WIDTH = 224;
 
@@ -13,7 +14,8 @@ function Localizer({ onSolve }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(document.createElement('canvas'));
 
-  const [session, setSession] = useState<ort.InferenceSession | null>(null);
+  const ortContext = useContext(ORTContext);
+
   const [stream, setStream] = useState<MediaStream | null>(null)
 
   // Stores an inference result
@@ -23,12 +25,6 @@ function Localizer({ onSolve }: Props) {
   const [x1, y1, x2, y2] = localization;
 
   useEffect(() => { 
-    ort.InferenceSession.create('./localizer.with_runtime_opt.ort', { executionProviders: ['webgl'] })
-      .then((session) => setSession(session))
-      .catch((e) => console.error(e));
-  }, []);
-
-  useEffect(() => {
     navigator.mediaDevices.getUserMedia({
       audio: false,
       video: {
@@ -41,7 +37,7 @@ function Localizer({ onSolve }: Props) {
   }, []);
 
   const processFrame = useCallback(async () => {
-    if (!videoRef.current || !session) return;
+    if (!videoRef.current) return;
 
     const context = canvasRef.current.getContext('2d', { willReadFrequently: true });
     context?.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
@@ -53,7 +49,7 @@ function Localizer({ onSolve }: Props) {
     img.convertTo(img, cv.CV_32F, 1. / 255);
 
     const input = new ort.Tensor('float32', img.data32F, [1, 1, HEIGHT, WIDTH]);
-    const { classification, localization } = await session.run({ input });
+    const { classification, localization } = await ortContext.localizer.run({ input });
     const [x1, y1, x2, y2] = localization.data as Float32Array;
 
     img.delete();
@@ -63,10 +59,10 @@ function Localizer({ onSolve }: Props) {
       localization: [x1, y1, x2, y2]
     });
     setTimeout(processFrame, 20);
-  }, [session]);
+  }, [ortContext.localizer]);
 
   useEffect(() => {
-    if (!videoRef.current || !session || !stream) return;
+    if (!videoRef.current || !stream) return;
 
     videoRef.current.srcObject = stream;
     videoRef.current.play();
@@ -83,17 +79,11 @@ function Localizer({ onSolve }: Props) {
     return () => {
       stream.getTracks()[0].stop();
     };
-  }, [processFrame, session, stream]);
+  }, [processFrame, stream]);
 
   if (!stream) {
     return <div className='loader'>
       <p>You have to give camera permissions to use this webapp.</p>
-    </div>;
-  }
-
-  if (!session) {
-    return <div className='loader'>
-      <p>Loading localizer model for sudoku detection.</p>
     </div>;
   }
 
