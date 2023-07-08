@@ -70,7 +70,7 @@ class DigitClassifier(nn.Module):
             nn.ReLU(inplace=True),
             nn.AvgPool2d(kernel_size=2, stride=2),
             nn.Conv2d(16, 120, kernel_size=5),
-            nn.ReLU(inplace=True),
+            nn.BatchNorm2d(120),
         )
 
         n_hidden = 84
@@ -86,6 +86,9 @@ class DigitClassifier(nn.Module):
                 nn.init.kaiming_normal_(m.weight, mode="fan_out")
                 if m.bias is not None:
                     nn.init.zeros_(m.bias)
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.ones_(m.weight)
+                nn.init.zeros_(m.bias)
             elif isinstance(m, nn.Linear):
                 nn.init.normal_(m.weight, 0, 0.01)
                 nn.init.zeros_(m.bias)
