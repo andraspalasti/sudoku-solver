@@ -94,7 +94,7 @@ class DigitClassifier(nn.Module):
         x = self.layers(x)
         x = torch.flatten(x, start_dim=1)
         x = self.classifier(x)
-        return nn.functional.log_softmax(x, dim=1)
+        return nn.functional.softmax(x, dim=1)
 
 
 if __name__ == '__main__':

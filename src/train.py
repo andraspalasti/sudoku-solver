@@ -26,13 +26,15 @@ parser.add_argument('-b', '--batch-size', default=256, type=int, choices=[2 ** x
                          'using Data Parallel or Distributed Data Parallel')
 parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
                     metavar='LR', help='initial learning rate', dest='learning_rate')
+parser.add_argument('--weight-decay', default=0, type=float,
+                    metavar='WD', help='weight decay to use 0 means no weight decay', dest='weight_decay')
 parser.add_argument('--resume', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
 parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
                     help='evaluate model on validation set')
 
 
-def train(training_loader, model, criterion, optimizer, epoch, device):
+def train(training_loader, model, loss_fn, optimizer, epoch, device):
     #  Switch to training mode
     model.train()
 
@@ -46,7 +48,7 @@ def train(training_loader, model, criterion, optimizer, epoch, device):
         targets = targets.to(device, non_blocking=True)
 
         outputs = model(images)
-        loss = criterion(outputs, targets)
+        loss = loss_fn(outputs, targets)
 
         optimizer.zero_grad()
         loss.backward()
@@ -58,19 +60,19 @@ def train(training_loader, model, criterion, optimizer, epoch, device):
     return running_loss / (i+1)
 
 
-def validate(val_loader, model, criterion, device):
-        model.eval()
-        running_vloss = 0.0
-        with torch.no_grad():
-            for i, (inputs, targets) in enumerate(val_loader):
-                # move data to the same device as model
-                inputs = inputs.to(device, non_blocking=True)
-                targets = targets.to(device, non_blocking=True)
+def validate(val_loader, model, loss_fn, device):
+    model.eval()
+    running_vloss = 0.0
+    with torch.no_grad():
+        for i, (inputs, targets) in enumerate(val_loader):
+            # move data to the same device as model
+            inputs = inputs.to(device, non_blocking=True)
+            targets = targets.to(device, non_blocking=True)
 
-                voutputs = model(inputs)
-                vloss = criterion(voutputs, targets)
-                running_vloss += vloss
-        return running_vloss / (i+1)
+            voutputs = model(inputs)
+            vloss = loss_fn(voutputs, targets)
+            running_vloss += vloss
+    return running_vloss / (i+1)
 
 
 def get_localizer(device):
@@ -130,7 +132,8 @@ def get_digit_classifier(device):
     validation_set = MyMNIST('data', train=False, transform=t)
 
     #  Loss function
-    def criterion(logits: torch.Tensor, targets: torch.Tensor):
+    def criterion(probs: torch.Tensor, targets: torch.Tensor):
+        logits = probs.log()
         return F.nll_loss(logits, targets)
 
     return model, train_set, validation_set, criterion
@@ -149,7 +152,7 @@ def main():
     validation_loader = DataLoader(
         validation_set, batch_size=args.batch_size, shuffle=False, pin_memory=True)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=0.1)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
 
     # Sets the learning rate to the initial LR decayed by 10 every 300 epochs
     scheduler = StepLR(optimizer, step_size=300, gamma=0.1)
