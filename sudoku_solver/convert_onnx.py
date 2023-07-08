@@ -2,7 +2,7 @@ import argparse
 
 import torch
 
-from models import Localizer, DigitClassifier
+from sudoku_solver.models import Localizer, DigitClassifier
 
 parser = argparse.ArgumentParser()
 parser.add_argument('model', type=str, choices=['localizer', 'digitclassifier'],

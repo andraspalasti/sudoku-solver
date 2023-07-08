@@ -9,8 +9,8 @@ from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import ConcatDataset, DataLoader, random_split
 from tqdm import tqdm
 
-from data.datasets import RandomImageDataset, PuzzleDataset, MyMNIST
-from models import Localizer, DigitClassifier
+from sudoku_solver.data.datasets import RandomImageDataset, PuzzleDataset, MyMNIST
+from sudoku_solver.models import Localizer, DigitClassifier
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--device', default='cpu',

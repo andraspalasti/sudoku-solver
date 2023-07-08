@@ -3,7 +3,7 @@ import time
 import cv2
 import torch
 
-from models import Localizer
+from sudoku_solver.models import Localizer
 
 
 def main():
