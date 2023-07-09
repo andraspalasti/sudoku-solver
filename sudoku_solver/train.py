@@ -25,6 +25,9 @@ parser.add_argument('-b', '--batch-size', default=256, type=int, choices=[2 ** x
                     help='mini-batch size (default: 256), this is the total '
                          'batch size of all GPUs on the current node when '
                          'using Data Parallel or Distributed Data Parallel')
+parser.add_argument('--step-size', default=40, type=int,
+                    metavar='N', dest='step_size',
+                    help='the number of epochs tu run before decreasing the learning rate')
 parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
                     metavar='LR', help='initial learning rate', dest='learning_rate')
 parser.add_argument('--weight-decay', default=0, type=float,
@@ -161,7 +164,7 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
 
     # Sets the learning rate to the initial LR decayed by 10 every 300 epochs
-    scheduler = StepLR(optimizer, step_size=300, gamma=0.1)
+    scheduler = StepLR(optimizer, step_size=args.step_size, gamma=0.1)
     best_loss = 1 << 32
 
     start_epoch = 0
