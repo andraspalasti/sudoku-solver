@@ -134,7 +134,7 @@ def get_digit_classifier(device):
     t = transforms.Compose([
         transforms.ToTensor(),
         # transforms.RandomErasing(scale=(0.02, 0.1)),
-        transforms.RandomAffine(degrees=10, translate=(0.35, 0.35), scale=(0.5, 0.8)),
+        transforms.RandomAffine(degrees=0, translate=(0.35, 0.35), scale=(0.5, 0.8)),
         transforms.ColorJitter(brightness=0.4, contrast=0.4),
         transforms.RandomAdjustSharpness(1.4),
     ])

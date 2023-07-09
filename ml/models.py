@@ -63,22 +63,26 @@ class DigitClassifier(nn.Module):
         super().__init__()
 
         self.layers = nn.Sequential(
-            nn.Conv2d(1, 6, kernel_size=5, padding=2),
+            nn.Conv2d(1, 6, kernel_size=3, padding=1), # 28x28 input
             nn.ReLU(inplace=True),
-            nn.AvgPool2d(kernel_size=2, stride=2),
+            nn.AvgPool2d(kernel_size=2, stride=2), # 14x14 output
 
-            nn.Conv2d(6, 16, kernel_size=5),
+            nn.Conv2d(6, 16, kernel_size=3), # input: 14x14, output: 12x12
             nn.ReLU(inplace=True),
-            nn.AvgPool2d(kernel_size=2, stride=2),
+            nn.AvgPool2d(kernel_size=2, stride=2), # input: 12x12, output 6x6
 
-            nn.Conv2d(16, 120, kernel_size=5),
-            nn.BatchNorm2d(120),
+            nn.Conv2d(16, 120, kernel_size=3, padding=1), # 6x6 input
             nn.ReLU(inplace=True),
+            nn.AvgPool2d(kernel_size=2, stride=2), # 3x3 output
+
+            nn.Conv2d(120, 240, kernel_size=3), # input: 3x3, output: 1x1
+            nn.BatchNorm2d(240),
+            nn.ReLU(inplace=True)
         )
 
-        n_hidden = 84
+        n_hidden = 120
         self.classifier = nn.Sequential(
-            nn.Linear(120, n_hidden),
+            nn.Linear(240, n_hidden),
             nn.ReLU(inplace=True),
             nn.Linear(n_hidden, 10)
         )
