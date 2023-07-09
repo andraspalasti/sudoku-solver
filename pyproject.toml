@@ -4,7 +4,7 @@ version = "0.1.0"
 description = ""
 authors = ["andraspalasti <andraspalasti2@gmail.com>"]
 readme = "README.md"
-packages = [{include = "sudoku_solver"}]
+packages = [{include = "ml"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
@@ -16,7 +16,12 @@ albumentations = "^1.3.1"
 numpy = "^1.25.0"
 pandas = "^2.0.3"
 opencv-python = "^4.8.0.74"
+onnx = "^1.14.0"
 
+
+[tool.poetry.group.dev.dependencies]
+matplotlib = "^3.7.2"
+ipykernel = "^6.24.0"
 
 [build-system]
 requires = ["poetry-core"]

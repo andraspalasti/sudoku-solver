@@ -1,9 +1,12 @@
 import time
+from pathlib import Path
 
 import cv2
 import torch
 
-from sudoku_solver.models import Localizer
+from ml.models import Localizer
+
+MODELS_DIR = Path(__file__).parent / '..' / '..' / 'models'
 
 
 def main():
@@ -13,7 +16,7 @@ def main():
     model.eval()
 
     # Load weights
-    checkpoint = torch.load('models/model_best.pth.tar', map_location=device)
+    checkpoint = torch.load(str(MODELS_DIR / 'localizer_best.pth.tar'), map_location=device)
     model.load_state_dict(checkpoint['state_dict'])
 
     cv2.namedWindow("preview")
