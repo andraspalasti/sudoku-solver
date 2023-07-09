@@ -64,12 +64,10 @@ class DigitClassifier(nn.Module):
 
         self.layers = nn.Sequential(
             nn.Conv2d(1, 6, kernel_size=5, padding=2),
-            nn.BatchNorm2d(6),
             nn.ReLU(inplace=True),
             nn.AvgPool2d(kernel_size=2, stride=2),
 
             nn.Conv2d(6, 16, kernel_size=5),
-            nn.BatchNorm2d(16),
             nn.ReLU(inplace=True),
             nn.AvgPool2d(kernel_size=2, stride=2),
 
@@ -101,8 +99,7 @@ class DigitClassifier(nn.Module):
     def forward(self, x: torch.Tensor):
         x = self.layers(x)
         x = torch.flatten(x, start_dim=1)
-        x = self.classifier(x)
-        return nn.functional.softmax(x, dim=1)
+        return self.classifier(x)
 
 
 if __name__ == '__main__':
