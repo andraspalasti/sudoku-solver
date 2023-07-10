@@ -46,30 +46,29 @@ function Solver({ sudokuImg }: Props) {
 
   const [sudoku, setSudoku] = useState<number[][] | null>(null);
 
-  useEffect(() => {
+  const tensor = useMemo(() => {
     const img = sudokuImg.clone();
     preprocess(img);
 
     // Split image into 9*9 IN_SIZExIN_SIZE squares
     const buffer = new Float32Array(9 * 9 * IN_SIZE * IN_SIZE);
     for (let row = 0; row < 9; ++row) {
-      for (let col = 0; col< 9; ++col) {
+      for (let col = 0; col < 9; ++col) {
         const rect = new cv.Rect(col * IN_SIZE, row * IN_SIZE, IN_SIZE, IN_SIZE);
         const region = img.roi(rect);
-        cv.imshow
         region.convertTo(region, cv.CV_32F, 1. / 255);
 
         buffer.set(region.data32F, (row * 9 + col) * IN_SIZE * IN_SIZE);
 
-        cv.imshow(`output${row}${col}`, region)
         region.delete();
       }
     }
     img.delete();
+    return new ort.Tensor('float32', buffer, [9 * 9, 1, IN_SIZE, IN_SIZE]);
+  }, [sudokuImg]);
 
-    const input = new ort.Tensor('float32', buffer, [9 * 9, 1, IN_SIZE, IN_SIZE]);
-
-    ortContext.classifier.run({ input: input })
+  useEffect(() => {
+    ortContext.classifier.run({ input: tensor })
       .then(({ classification }) => {
         const sudoku = Array(9).fill(0).map(() => Array(9).fill(0));
         const [rows, cols] = classification.dims
@@ -86,16 +85,9 @@ function Solver({ sudokuImg }: Props) {
         setSudoku(sudoku);
       })
       .catch((e) => console.error(e));
-  }, [ortContext.classifier, sudokuImg]); 
+  }, [ortContext.classifier, tensor])
 
   return <div>
-    {Array(9).fill(0).map((_, i) =>
-      <div key={i}>
-        {Array(9).fill(0).map((_, j) =>
-          <canvas key={j} style={{ margin: 5 }} id={`output${i}${j}`}></canvas>
-        )}
-      </div>
-    )}
     {sudoku && sudoku.map((row, i) => {
       return <div key={i}>
         {row.map((n, j) => {

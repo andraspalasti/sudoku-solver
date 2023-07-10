@@ -1,9 +1,9 @@
 import { useRef, useEffect, useState, useCallback, useContext } from 'react';
 import * as cv from '@techstark/opencv-js';
 import * as ort from 'onnxruntime-web';
-import './Localizer.css'
 import { ORTContext } from './App';
 
+const FPS = 5;
 const HEIGHT = 224, WIDTH = 224;
 
 type Props = {
@@ -13,17 +13,14 @@ type Props = {
 function Localizer({ onSolve }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(document.createElement('canvas'));
-
   const ortContext = useContext(ORTContext);
-
-  const [stream, setStream] = useState<MediaStream | null>(null)
 
   // Stores an inference result
   const [{localization, classification}, setResult] = useState({classification: 0.0, localization: [0.0, 0.0, 0.0, 0.0]});
-
   const isPresent = 0.9 < classification;
   const [x1, y1, x2, y2] = localization;
 
+  const [stream, setStream] = useState<MediaStream | null>(null);
   useEffect(() => { 
     navigator.mediaDevices.getUserMedia({
       audio: false,
@@ -39,9 +36,9 @@ function Localizer({ onSolve }: Props) {
   const processFrame = useCallback(async () => {
     if (!videoRef.current) return;
 
+    const start = performance.now();
     const context = canvasRef.current.getContext('2d', { willReadFrequently: true });
     context?.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
-
     const img = cv.imread(canvasRef.current);
 
     cv.resize(img, img, new cv.Size(WIDTH, HEIGHT));
@@ -58,14 +55,17 @@ function Localizer({ onSolve }: Props) {
       classification: classification.data[0] as number,
       localization: [x1, y1, x2, y2]
     });
-    setTimeout(processFrame, 20);
+    const end = performance.now();
+    const freq = Math.max(5, 1000 / FPS - (end - start)) - 4;
+    setTimeout(processFrame, freq);
   }, [ortContext.localizer]);
 
   useEffect(() => {
     if (!videoRef.current || !stream) return;
 
+    // When stream is available start it in the video element
     videoRef.current.srcObject = stream;
-    videoRef.current.play();
+    // videoRef.current.play();
 
     const { width, height } = stream.getVideoTracks()[0].getSettings();
     canvasRef.current.width = width ?? 600;
@@ -74,7 +74,6 @@ function Localizer({ onSolve }: Props) {
     // Everything has loaded start processing frames
     processFrame();
 
-    // TODO: Stop processing frames if component unmounts
     // Unregister webcam if component unmounts
     return () => {
       stream.getTracks()[0].stop();
@@ -82,8 +81,10 @@ function Localizer({ onSolve }: Props) {
   }, [processFrame, stream]);
 
   if (!stream) {
-    return <div className='loader'>
-      <p>You have to give camera permissions to use this webapp.</p>
+    return <div className='h-screen flex justify-center items-center p-4 sm:p-8'>
+      <p className='text-xl text-center font-normal text-gray-600'>
+        You have to give camera permissions to use this webapp.
+      </p>
     </div>;
   }
 
@@ -91,10 +92,13 @@ function Localizer({ onSolve }: Props) {
     scaleY = (videoRef.current?.clientHeight ?? HEIGHT) / HEIGHT;
 
   return (
-    <div className='localizer'>
-      <div className='camera'>
-        <video autoPlay playsInline ref={videoRef} onPlay={processFrame}></video>
-        <div className='outline' style={{
+    <div className='h-screen flex justify-center items-center flex-col p-4 sm:p-8'>
+      <div className='w-full flex justify-center relative my-4'>
+        <video
+          className='w-full rounded-xl shadow-xl border-2 border-gray-200'
+          autoPlay playsInline ref={videoRef}>
+        </video>
+        <div className='absolute bg-white transition-all duration-300' style={{
           top: y1 * scaleY,
           left: x1 * scaleX,
           width: (x2 - x1) * scaleX,
@@ -102,8 +106,11 @@ function Localizer({ onSolve }: Props) {
           opacity: isPresent ? 0.6 : 0
         }}></div>
       </div>
+
       <button
         disabled={!isPresent}
+        className={`transition-all duration-200 mt-4 px-8 py-4 font-semibold text-sm bg-blue-500 text-white rounded-full shadow-xl 
+                    ${isPresent ? 'translate-y-1 opacity-1' : 'opacity-0'}`}
         onClick={() => {
           // Crop the sudoku out of the image
           const img = cv.imread(canvasRef.current);
@@ -120,7 +127,12 @@ function Localizer({ onSolve }: Props) {
           crop.delete();
           img.delete();
         }}
-        className='solve'>SOLVE</button>
+      >
+        SOLVE
+      </button>
+
+      {/* Filler to push elements to top */}
+      <div className='w-full h-1/6'></div>
     </div>
   );
 }
