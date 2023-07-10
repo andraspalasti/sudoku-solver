@@ -2,9 +2,9 @@ import { useRef, useEffect, useState, useCallback, useContext } from 'react';
 import * as cv from '@techstark/opencv-js';
 import * as ort from 'onnxruntime-web';
 import { ORTContext } from './App';
+import { SUDOKU_IMG_HEIGHT, SUDOKU_IMG_WIDTH } from './constants';
 
 const FPS = 5;
-const HEIGHT = 224, WIDTH = 224;
 
 type Props = {
   onSolve?: (img: cv.Mat) => void;
@@ -41,11 +41,11 @@ function Localizer({ onSolve }: Props) {
     context?.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
     const img = cv.imread(canvasRef.current);
 
-    cv.resize(img, img, new cv.Size(WIDTH, HEIGHT));
+    cv.resize(img, img, new cv.Size(SUDOKU_IMG_WIDTH, SUDOKU_IMG_WIDTH));
     cv.cvtColor(img, img, cv.COLOR_RGB2GRAY);
     img.convertTo(img, cv.CV_32F, 1. / 255);
 
-    const input = new ort.Tensor('float32', img.data32F, [1, 1, HEIGHT, WIDTH]);
+    const input = new ort.Tensor('float32', img.data32F, [1, 1, SUDOKU_IMG_HEIGHT, SUDOKU_IMG_WIDTH]);
     const { classification, localization } = await ortContext.localizer.run({ input });
     const [x1, y1, x2, y2] = localization.data as Float32Array;
 
@@ -88,11 +88,12 @@ function Localizer({ onSolve }: Props) {
     </div>;
   }
 
-  const scaleX = (videoRef.current?.clientWidth ?? WIDTH) / WIDTH,
-    scaleY = (videoRef.current?.clientHeight ?? HEIGHT) / HEIGHT;
+  const scaleX = (videoRef.current?.clientWidth ?? 0) / SUDOKU_IMG_WIDTH,
+    scaleY = (videoRef.current?.clientHeight ?? 0) / SUDOKU_IMG_HEIGHT;
 
   return (
     <div className='h-screen flex justify-center items-center flex-col p-4 sm:p-8'>
+      <canvas id='out'></canvas>
       <div className='w-full flex justify-center relative my-4'>
         <video
           className='w-full rounded-xl shadow-xl border-2 border-gray-200'
@@ -115,7 +116,7 @@ function Localizer({ onSolve }: Props) {
           // Crop the sudoku out of the image
           const img = cv.imread(canvasRef.current);
 
-          const scaleX = img.cols / WIDTH, scaleY = img.rows / HEIGHT;
+          const scaleX = img.cols / SUDOKU_IMG_WIDTH, scaleY = img.rows / SUDOKU_IMG_HEIGHT;
           const sudokuRect = new cv.Rect(
             x1 * scaleX, y1 * scaleY,
             (x2 - x1) * scaleX, (y2 - y1) * scaleY

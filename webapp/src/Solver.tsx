@@ -3,43 +3,15 @@ import * as ort from 'onnxruntime-web';
 import * as cv from '@techstark/opencv-js';
 import { useContext, useEffect, useMemo, useState } from 'react';
 import { ORTContext } from './App';
+import { DIGIT_IMG_HEIGHT, DIGIT_IMG_WIDTH } from './constants';
+import { preForDigitRec } from './image-processing';
+
+
+const IMG_SIZE = DIGIT_IMG_HEIGHT * DIGIT_IMG_WIDTH;
 
 type Props = {
   sudokuImg: cv.Mat;
 };
-
-const IN_SIZE = 28;
-
-function preprocess(img: cv.Mat) {
-  // Resize img to appropriate size
-  cv.resize(img, img, new cv.Size(9 * IN_SIZE, 9 * IN_SIZE));
-
-  // Convert to grayscale
-  cv.cvtColor(img, img, cv.COLOR_RGB2GRAY);
-
-  // Perform thresholding, so the lines are easier to detect
-  cv.adaptiveThreshold(img, img, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 11, 15);
-
-  // Create dilated copy of the img where the lines have more thickness
-  const dilated = new cv.Mat();
-  const M = cv.Mat.ones(3, 3, cv.CV_8U);
-  cv.dilate(img, dilated, M);
-
-  // Detect lines
-  const lines = new cv.Mat();
-  cv.HoughLinesP(dilated, lines, 1, Math.PI / 180.0, 80, 70, 4);
-
-  // Erase lines from image by painting them over with black
-  for (let i = 0; i < lines.rows; ++i) {
-    const startPoint = new cv.Point(lines.data32S[i * 4], lines.data32S[i * 4 + 1]);
-    const endPoint = new cv.Point(lines.data32S[i * 4 + 2], lines.data32S[i * 4 + 3]);
-    cv.line(img, startPoint, endPoint, [0, 0, 0, 255], 3);
-  }
-
-  // Delete used resources
-  M.delete();
-  dilated.delete();
-}
 
 function Solver({ sudokuImg }: Props) {
   const ortContext = useContext(ORTContext);
@@ -48,23 +20,23 @@ function Solver({ sudokuImg }: Props) {
 
   const tensor = useMemo(() => {
     const img = sudokuImg.clone();
-    preprocess(img);
+    preForDigitRec(img);
 
     // Split image into 9*9 IN_SIZExIN_SIZE squares
-    const buffer = new Float32Array(9 * 9 * IN_SIZE * IN_SIZE);
+    const buffer = new Float32Array(9 * 9 * IMG_SIZE);
     for (let row = 0; row < 9; ++row) {
       for (let col = 0; col < 9; ++col) {
-        const rect = new cv.Rect(col * IN_SIZE, row * IN_SIZE, IN_SIZE, IN_SIZE);
+        const rect = new cv.Rect(col * DIGIT_IMG_WIDTH, row * DIGIT_IMG_HEIGHT, DIGIT_IMG_WIDTH, DIGIT_IMG_HEIGHT);
         const region = img.roi(rect);
         region.convertTo(region, cv.CV_32F, 1. / 255);
 
-        buffer.set(region.data32F, (row * 9 + col) * IN_SIZE * IN_SIZE);
+        buffer.set(region.data32F, (row * 9 + col) * IMG_SIZE);
 
         region.delete();
       }
     }
     img.delete();
-    return new ort.Tensor('float32', buffer, [9 * 9, 1, IN_SIZE, IN_SIZE]);
+    return new ort.Tensor('float32', buffer, [9 * 9, 1, DIGIT_IMG_HEIGHT, DIGIT_IMG_WIDTH]);
   }, [sudokuImg]);
 
   useEffect(() => {
