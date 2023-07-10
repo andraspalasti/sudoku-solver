@@ -44,6 +44,9 @@ def main():
     x = torch.randn(model_def['input_shape'], requires_grad=True)
     torch_out = torch_model(x)
 
+    dynamic_axes = { name: [0] for name in model_def['output_names'] }
+    dynamic_axes['input'] = [0]
+
     # Export the model
     torch.onnx.export(torch_model,               # model being run
                       x,  # model input (or a tuple for multiple inputs)
@@ -52,7 +55,9 @@ def main():
                       opset_version=14,          # the ONNX version to export the model to
                       do_constant_folding=True,  # whether to execute constant folding for optimization
                       input_names=model_def['input_names'],
-                      output_names=model_def['output_names'])
+                      output_names=model_def['output_names'],
+                      dynamic_axes=dynamic_axes,
+                      verbose=False)
 
     # To generate ort from onnx run:
     #  python3 -m onnxruntime.tools.convert_onnx_models_to_ort <onnx model file or dir>

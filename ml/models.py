@@ -64,14 +64,17 @@ class DigitClassifier(nn.Module):
 
         self.layers = nn.Sequential(
             nn.Conv2d(1, 6, kernel_size=3, padding=1), # 28x28 input
+            nn.BatchNorm2d(6),
             nn.ReLU(inplace=True),
             nn.AvgPool2d(kernel_size=2, stride=2), # 14x14 output
 
             nn.Conv2d(6, 16, kernel_size=3), # input: 14x14, output: 12x12
+            nn.BatchNorm2d(16),
             nn.ReLU(inplace=True),
             nn.AvgPool2d(kernel_size=2, stride=2), # input: 12x12, output 6x6
 
             nn.Conv2d(16, 120, kernel_size=3, padding=1), # 6x6 input
+            nn.BatchNorm2d(120),
             nn.ReLU(inplace=True),
             nn.AvgPool2d(kernel_size=2, stride=2), # 3x3 output
 
