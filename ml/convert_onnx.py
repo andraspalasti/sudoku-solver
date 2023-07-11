@@ -9,6 +9,15 @@ parser.add_argument('model', type=str, choices=['localizer', 'digitclassifier'],
                     help='the model to export as onnx')
 
 
+class ONNXDigitClassifier(DigitClassifier):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x: torch.Tensor):
+        out = super().forward(x)
+        return torch.nn.functional.softmax(out, dim=1)
+
+
 models = {
     'localizer': {
         'torch_model': Localizer,
@@ -19,7 +28,7 @@ models = {
         'out': 'localizer.onnx',
     },
     'digitclassifier': {
-        'torch_model': DigitClassifier,
+        'torch_model': ONNXDigitClassifier,
         'checkpoint': 'models/digitclassifier_best.pth.tar',
         'input_shape': (9*9, 1, 28, 28),
         'input_names': ['input'],
