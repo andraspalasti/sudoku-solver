@@ -59,33 +59,31 @@ class Localizer(nn.Module):
 class DigitClassifier(nn.Module):
     """Classifier for handwritten digits."""
 
-    def __init__(self):
+    def __init__(self, dropout=0.5):
         super().__init__()
 
         self.layers = nn.Sequential(
-            nn.Conv2d(1, 6, kernel_size=3, padding=1), # 28x28 input
-            nn.BatchNorm2d(6),
+            nn.Conv2d(1, 8, kernel_size=3, padding=1), # 28x28 input
             nn.ReLU(inplace=True),
             nn.AvgPool2d(kernel_size=2, stride=2), # 14x14 output
 
-            nn.Conv2d(6, 16, kernel_size=3), # input: 14x14, output: 12x12
-            nn.BatchNorm2d(16),
+            nn.Conv2d(8, 32, kernel_size=3), # input: 14x14, output: 12x12
             nn.ReLU(inplace=True),
             nn.AvgPool2d(kernel_size=2, stride=2), # input: 12x12, output 6x6
 
-            nn.Conv2d(16, 120, kernel_size=3, padding=1), # 6x6 input
-            nn.BatchNorm2d(120),
+            nn.Conv2d(32, 128, kernel_size=3, padding=1), # 6x6 input
             nn.ReLU(inplace=True),
             nn.AvgPool2d(kernel_size=2, stride=2), # 3x3 output
 
-            nn.Conv2d(120, 240, kernel_size=3), # input: 3x3, output: 1x1
-            nn.BatchNorm2d(240),
+            nn.Conv2d(128, 512, kernel_size=3), # input: 3x3, output: 1x1
+            nn.BatchNorm2d(512),
             nn.ReLU(inplace=True)
         )
 
-        n_hidden = 120
+        n_hidden = 256
         self.classifier = nn.Sequential(
-            nn.Linear(240, n_hidden),
+            nn.Dropout(p=dropout),
+            nn.Linear(512, n_hidden),
             nn.ReLU(inplace=True),
             nn.Linear(n_hidden, 10)
         )
