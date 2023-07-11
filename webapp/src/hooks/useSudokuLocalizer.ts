@@ -52,14 +52,14 @@ export default function useSudokuLocalizer(video: HTMLVideoElement | null) {
     const [x1, y1, x2, y2] = result.location;
     const { img } = resources.current;
     const scaleX = img.cols / SUDOKU_IMG_WIDTH, scaleY = img.rows / SUDOKU_IMG_HEIGHT;
-    return img.roi(new cv.Rect(
+    const boundingRect = new cv.Rect(
       x1 * scaleX - padding, y1 * scaleY - padding,
       (x2 - x1) * scaleX + 2 * padding, (y2 - y1) * scaleY + 2 * padding
-    ));
+    );
+    return img.roi(boundingRect);
   }, [result.location])
 
   useEffect(() => {
-
     function onPlay() {
       if (!video) return;
       if (!(video.srcObject instanceof MediaStream)) return;

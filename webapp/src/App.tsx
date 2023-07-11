@@ -2,7 +2,7 @@ import { createContext, useEffect, useState } from 'react';
 import * as cv from '@techstark/opencv-js';
 import * as ort from 'onnxruntime-web';
 import Localizer from './Localizer';
-import Solver from './Solver';
+import DigitRecognition from './DigitRecognition';
 
 type ORTContextType = {
   localizer: ort.InferenceSession,
@@ -14,7 +14,7 @@ export const ORTContext = createContext<ORTContextType>({
   classifier: null as any,
 });
 
-function App() {
+export default function App() {
   const [ortContext, setOrtContext] = useState<{
     localizer?: ort.InferenceSession,
     classifier?: ort.InferenceSession
@@ -45,7 +45,7 @@ function App() {
 
   return <ORTContext.Provider value={ortContext as any}>
     {sudoku ?
-      <Solver sudokuImg={sudoku} /> :
+      <DigitRecognition sudokuImg={sudoku} /> :
       <Localizer
         onSolve={(img) => {
           const newSudoku = new cv.Mat();
@@ -55,5 +55,3 @@ function App() {
       />}
   </ORTContext.Provider>;
 }
-
-export default App;

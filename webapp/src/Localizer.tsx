@@ -7,7 +7,7 @@ type Props = {
   onSolve?: (img: cv.Mat) => void;
 }
 
-function Localizer({ onSolve }: Props) {
+export default function Localizer({ onSolve }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Stores an inference result
@@ -59,21 +59,23 @@ function Localizer({ onSolve }: Props) {
           autoPlay playsInline ref={videoRef}>
         </video>
         <div className='absolute bg-white transition-all' style={{
-          top: y1 * scaleY - 5,
-          left: x1 * scaleX - 5,
-          width: (x2 - x1) * scaleX + 10,
-          height: (y2 - y1) * scaleY + 10,
+          top: y1 * scaleY,
+          left: x1 * scaleX,
+          width: (x2 - x1) * scaleX,
+          height: (y2 - y1) * scaleY,
           opacity: isPresent ? 0.6 : 0
         }}></div>
       </div>
 
       <button
         disabled={!isPresent}
-        className={`transition-all duration-200 mt-4 px-8 py-4 font-semibold text-sm bg-blue-500 text-white rounded-full shadow-xl 
+        className={`transition-all duration-200 mt-4 focus:outline-none focus:ring-4 focus:ring-blue-300 px-8 
+                    py-4 font-bold text-sm bg-blue-500 disabled:bg-blue-400 text-white rounded-full shadow-xl 
                     ${isPresent ? '-translate-y-1 opacity-1' : 'opacity-0'}`}
         onClick={() => {
-          const crop = cropSudoku(1);
+          const crop = cropSudoku();
           onSolve && onSolve(crop);
+          // crop.delete();
         }}
       >
         SOLVE
@@ -81,5 +83,3 @@ function Localizer({ onSolve }: Props) {
     </div>
   );
 }
-
-export default Localizer;
