@@ -7,7 +7,7 @@ import { DIGIT_IMG_HEIGHT, DIGIT_IMG_WIDTH } from '../constants';
 const IMG_SIZE = DIGIT_IMG_HEIGHT * DIGIT_IMG_WIDTH;
 
 export default function useDigitRecognition(img: cv.Mat) {
-  const [digits, setDigits] = useState<number[]>([]);
+  const [digits, setDigits] = useState<{digit: number, prob: number}[]>([]);
   const { classifier } = useContext(ORTContext);
 
   const resources = useRef<{
@@ -86,15 +86,19 @@ export default function useDigitRecognition(img: cv.Mat) {
     classifier.run({ input })
       .then(({ classification }) => {
         const digits = [];
+
         const [rows, cols] = classification.dims;
+        const data = classification.data as unknown as number[];
+
         for (let row = 0; row < rows; ++row) {
-          let maxIdx = 0;
+          let maxIdx = 0, maxProb = 0;
           for (let col = 0; col < cols; ++col) {
-            if (classification.data[row * cols + maxIdx] < classification.data[row * cols + col]) {
+            if (maxProb < data[row * cols + col]) {
               maxIdx = col;
+              maxProb = data[row * cols + col];
             }
           }
-          digits.push(maxIdx);
+          digits.push({ digit: maxIdx, prob: maxProb });
         }
         setDigits(digits);
       });
