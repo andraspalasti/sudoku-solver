@@ -62,29 +62,34 @@ class DigitClassifier(nn.Module):
     def __init__(self, dropout=0.5):
         super().__init__()
 
-        self.layers = nn.Sequential(
-            nn.Conv2d(1, 8, kernel_size=3, padding=1), # 28x28 input
+        self.conv_layers = nn.Sequential(
+            nn.Conv2d(1, 64, kernel_size=3, padding=1), # 28x28 input
             nn.ReLU(inplace=True),
-            nn.AvgPool2d(kernel_size=2, stride=2), # 14x14 output
+            nn.MaxPool2d(kernel_size=2, stride=2), # 14x14 output
 
-            nn.Conv2d(8, 32, kernel_size=3), # input: 14x14, output: 12x12
+            nn.Conv2d(64, 128, kernel_size=3, padding=1), # input: 14x14, output: 14x14
             nn.ReLU(inplace=True),
-            nn.AvgPool2d(kernel_size=2, stride=2), # input: 12x12, output 6x6
+            nn.MaxPool2d(kernel_size=2, stride=2), # input: 14x14, output 7x7
 
-            nn.Conv2d(32, 128, kernel_size=3, padding=1), # 6x6 input
+            nn.Conv2d(128, 256, kernel_size=3, padding=1), # 7x7 input
             nn.ReLU(inplace=True),
-            nn.AvgPool2d(kernel_size=2, stride=2), # 3x3 output
+            nn.Conv2d(256, 256, kernel_size=3, padding=1), # 7x7 input
+            nn.ReLU(inplace=True),
 
-            nn.Conv2d(128, 512, kernel_size=3), # input: 3x3, output: 1x1
-            nn.BatchNorm2d(512),
-            nn.ReLU(inplace=True)
+            nn.AdaptiveMaxPool2d((4, 4)) # output: 256x4x4 = 4096
         )
 
-        n_hidden = 256
+        n_hidden = 1024
         self.classifier = nn.Sequential(
-            nn.Dropout(p=dropout),
-            nn.Linear(512, n_hidden),
+            nn.Linear(4096, n_hidden),
+            nn.Dropout(p=dropout), # Does not matter in which order does Dropout and ReLU follow each other 
+                                   # because they produce the same output either way.
             nn.ReLU(inplace=True),
+
+            nn.Linear(n_hidden, n_hidden),
+            nn.BatchNorm1d(n_hidden),
+            nn.ReLU(inplace=True),
+
             nn.Linear(n_hidden, 10)
         )
 
@@ -102,7 +107,7 @@ class DigitClassifier(nn.Module):
                 nn.init.zeros_(m.bias)
 
     def forward(self, x: torch.Tensor):
-        x = self.layers(x)
+        x = self.conv_layers(x)
         x = torch.flatten(x, start_dim=1)
         return self.classifier(x)
 
