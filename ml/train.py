@@ -8,6 +8,7 @@ import torch.nn.functional as F
 import torchvision.transforms as transforms
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import ConcatDataset, DataLoader, random_split
+from torchvision.datasets import ImageFolder
 from tqdm import tqdm
 
 from ml.data.datasets import RandomImageDataset, PuzzleDataset, MyMNIST
@@ -133,13 +134,29 @@ def get_digit_classifier(device):
 
     t = transforms.Compose([
         transforms.ToTensor(),
-        # transforms.RandomErasing(scale=(0.02, 0.1)),
-        transforms.RandomAffine(degrees=0, translate=(0.3, 0.3), scale=(0.5, 0.8)),
-        transforms.ColorJitter(brightness=0.4, contrast=0.4),
-        transforms.RandomAdjustSharpness(1.4),
+        transforms.Grayscale(),
+        transforms.RandomAffine(degrees=5, translate=(0.1, 0.1), scale=(0.9, 1.0))
     ])
-    train_set = MyMNIST(str(DATA_DIR), train=True, transform=t)
-    validation_set = MyMNIST(str(DATA_DIR), train=False, transform=t)
+    printed_digits = ImageFolder(str(DATA_DIR / 'digits'), transform=t,
+                                 target_transform=lambda target: target+1)
+
+    train_size = int(len(printed_digits) * 0.9)
+    validation_size = len(printed_digits) - train_size
+    train_printed_set, validation_printed_set = random_split(printed_digits, [train_size, validation_size])
+
+    t = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Grayscale(),
+        transforms.RandomAffine(degrees=0, translate=(0.25, 0.25), scale=(0.5, 0.8))
+    ])
+    train_set = ConcatDataset([
+        MyMNIST(str(DATA_DIR), train=True, transform=t),
+        *([train_printed_set] * 10)
+    ])
+    validation_set = ConcatDataset([
+        MyMNIST(str(DATA_DIR), train=False, transform=t),
+        *([validation_printed_set] * 10)
+    ])
 
     #  Loss function
     def criterion(logits: torch.Tensor, targets: torch.Tensor):
