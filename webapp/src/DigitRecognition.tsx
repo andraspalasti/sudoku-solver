@@ -5,11 +5,12 @@ import { useEffect, useState } from 'react';
 
 type Props = {
   sudokuImg: cv.Mat;
+  onBack?: () => void;
+  onSolve?: () => void;
 };
 
-export default function DigitRecognition({ sudokuImg }: Props) {
+export default function DigitRecognition({ sudokuImg, onBack, onSolve }: Props) {
   const digits = useDigitRecognition(sudokuImg);
-  console.log(digits);
 
   const [sudoku, setSudoku] = useState<{digit: number, certain: boolean}[] | null>(null);
   useEffect(() => {
@@ -87,13 +88,23 @@ export default function DigitRecognition({ sudokuImg }: Props) {
         );
       })}
     </div>
-    <button
-      disabled={hasCollision}
-      className={`transition-all duration-200 mt-4 focus:outline-none focus:ring-4 focus:ring-blue-300 px-8 
-                  py-4 font-bold text-sm bg-blue-500 disabled:bg-blue-400 text-white rounded-full shadow-xl 
-                  ${!hasCollision ? '-translate-y-1 opacity-1' : 'opacity-60'}`}
+    <div className='flex'>
+      <button
+        onClick={onBack}
+        className={`mt-4 focus:outline-none focus:ring-4 focus:ring-blue-300 px-8 
+                    py-4 font-bold text-sm bg-blue-500 text-white rounded-l-full shadow-xl`}
       >
-      SOLVE
-    </button>
+        BACK
+      </button>
+      <button
+        onClick={onSolve}
+        disabled={hasCollision}
+        className={`transition-all duration-200 mt-4 focus:outline-none focus:ring-4 focus:ring-blue-300 px-8 
+                    py-4 font-bold text-sm bg-blue-500 disabled:bg-blue-400 text-white rounded-r-full shadow-xl 
+                    ${!hasCollision ? 'opacity-1' : 'opacity-60'}`}
+        >
+        SOLVE
+      </button>
+    </div>
   </div>;
 }

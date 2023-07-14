@@ -12,7 +12,7 @@ export default function Localizer({ onSolve }: Props) {
 
   // Stores an inference result
   const {prob, location, cropSudoku} = useSudokuLocalizer(videoRef.current);
-  const isPresent = 0.9 < prob;
+  const isPresent = 0.95 < prob;
   const [x1, y1, x2, y2] = location;
 
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -73,12 +73,12 @@ export default function Localizer({ onSolve }: Props) {
                     py-4 font-bold text-sm bg-blue-500 disabled:bg-blue-400 text-white rounded-full shadow-xl 
                     ${isPresent ? '-translate-y-1 opacity-1' : 'opacity-0'}`}
         onClick={() => {
-          const crop = cropSudoku();
+          const crop = cropSudoku(3);
           onSolve && onSolve(crop);
-          // crop.delete();
+          crop.delete();
         }}
       >
-        SOLVE
+        SCAN
       </button>
     </div>
   );

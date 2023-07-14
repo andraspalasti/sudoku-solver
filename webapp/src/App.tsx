@@ -45,7 +45,10 @@ export default function App() {
 
   return <ORTContext.Provider value={ortContext as any}>
     {sudoku ?
-      <DigitRecognition sudokuImg={sudoku} /> :
+      <DigitRecognition
+        sudokuImg={sudoku}
+        onBack={() => setSudoku(null)}
+      /> :
       <Localizer
         onSolve={(img) => {
           const newSudoku = new cv.Mat();
