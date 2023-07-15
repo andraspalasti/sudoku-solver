@@ -4,10 +4,10 @@ import { SUDOKU_IMG_HEIGHT, SUDOKU_IMG_WIDTH } from './constants';
 import useSudokuLocalizer from './hooks/useSudokuLocalizer';
 
 type Props = {
-  onSolve?: (img: cv.Mat) => void;
+  onScan?: (img: cv.Mat) => void;
 }
 
-export default function Localizer({ onSolve }: Props) {
+export default function Localizer({ onScan }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Stores an inference result
@@ -59,10 +59,10 @@ export default function Localizer({ onSolve }: Props) {
           autoPlay playsInline ref={videoRef}>
         </video>
         <div className='absolute bg-white transition-all' style={{
-          top: y1 * scaleY,
-          left: x1 * scaleX,
-          width: (x2 - x1) * scaleX,
-          height: (y2 - y1) * scaleY,
+          top: y1 * scaleY - 5,
+          left: x1 * scaleX - 5,
+          width: (x2 - x1) * scaleX + 10,
+          height: (y2 - y1) * scaleY + 10,
           opacity: isPresent ? 0.6 : 0
         }}></div>
       </div>
@@ -73,8 +73,8 @@ export default function Localizer({ onSolve }: Props) {
                     py-4 font-bold text-sm bg-blue-500 disabled:bg-blue-400 text-white rounded-full shadow-xl 
                     ${isPresent ? '-translate-y-1 opacity-1' : 'opacity-0'}`}
         onClick={() => {
-          const crop = cropSudoku(3);
-          onSolve && onSolve(crop);
+          const crop = cropSudoku(4);
+          onScan && onScan(crop);
           crop.delete();
         }}
       >

@@ -1,8 +1,8 @@
-import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as ort from 'onnxruntime-web';
 import * as cv from '@techstark/opencv-js';
 import { SUDOKU_IMG_HEIGHT, SUDOKU_IMG_WIDTH } from '../constants';
-import { ORTContext } from "../App";
+import { useOrtContext } from "../contexts/ort-context";
 
 type LocalizerResult = {
   prob: number,
@@ -15,7 +15,7 @@ export default function useSudokuLocalizer(video: HTMLVideoElement | null) {
   const timeoutId = useRef<NodeJS.Timeout | null>(null);
   const canvasRef = useRef(document.createElement('canvas'));
 
-  const { localizer } = useContext(ORTContext);
+  const { localizer } = useOrtContext();
 
   const [result, setResult] = useState<LocalizerResult>({ location: [0, 0, 0, 0], prob: 0.0 });
 
@@ -64,13 +64,13 @@ export default function useSudokuLocalizer(video: HTMLVideoElement | null) {
       if (!video) return;
       if (!(video.srcObject instanceof MediaStream)) return;
 
-      const track = video.srcObject.getVideoTracks()[0];
-      const { width, height } = track.getSettings();
+      // const track = video.srcObject.getVideoTracks()[0];
+      // const { width, height } = track.getSettings();
 
-      canvasRef.current.width = width!;
-      canvasRef.current.height = height!;
+      canvasRef.current.width = video.videoWidth;
+      canvasRef.current.height = video.videoWidth;
       resources.current = {
-        img: new cv.Mat(height!, width!, cv.CV_8UC4),
+        img: new cv.Mat(video.videoWidth, video.videoWidth, cv.CV_8UC4),
         resized: new cv.Mat(SUDOKU_IMG_HEIGHT, SUDOKU_IMG_WIDTH, cv.CV_8UC4),
         gray: new cv.Mat(SUDOKU_IMG_HEIGHT, SUDOKU_IMG_WIDTH, cv.CV_8UC1),
         converted: new cv.Mat(SUDOKU_IMG_HEIGHT, SUDOKU_IMG_WIDTH, cv.CV_32F),

@@ -1,8 +1,8 @@
-import { useContext, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import * as ort from 'onnxruntime-web';
 import * as cv from '@techstark/opencv-js';
-import { ORTContext } from '../App';
 import { DIGIT_IMG_HEIGHT, DIGIT_IMG_WIDTH } from '../constants';
+import { useOrtContext } from '../contexts/ort-context';
 
 const IMG_SIZE = DIGIT_IMG_HEIGHT * DIGIT_IMG_WIDTH;
 
@@ -14,7 +14,7 @@ function threshold(img: cv.Mat) {
     const thresh = new cv.Mat(img.rows, img.cols, cv.CV_8UC1);
     cv.cvtColor(img, thresh, cv.COLOR_RGB2GRAY);
     cv.GaussianBlur(thresh, thresh, new cv.Size(3, 3), 3)
-    cv.adaptiveThreshold(thresh, thresh, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 5, 3);
+    cv.adaptiveThreshold(thresh, thresh, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 7, 5);
     return thresh;
 }
 
@@ -68,12 +68,13 @@ function warpPerspective(thresh: cv.Mat) {
 
 export default function useDigitRecognition(img: cv.Mat) {
   const [digits, setDigits] = useState<{digit: number, prob: number}[]>([]);
-  const { classifier } = useContext(ORTContext);
+  const { classifier } = useOrtContext();
 
   useEffect(() => {
     const thresh = threshold(img);
     const warped = warpPerspective(thresh);
     removeLines(warped);
+    cv.imshow('out', warped);
 
     // Collect data into one buffer so we can pass it to a tensor
     const buffer = new Float32Array(9 * 9 * IMG_SIZE);

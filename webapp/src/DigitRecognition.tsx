@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 type Props = {
   sudokuImg: cv.Mat;
   onBack?: () => void;
-  onSolve?: () => void;
+  onSolve?: (puzzle: number[]) => void;
 };
 
 export default function DigitRecognition({ sudokuImg, onBack, onSolve }: Props) {
@@ -38,10 +38,9 @@ export default function DigitRecognition({ sudokuImg, onBack, onSolve }: Props) 
     // Check in 3x3 square
     for (let i = Math.floor(row / 3) * 3; i < 3; i++) {
       for (let j = Math.floor(col / 3) * 3; j < 3; j++) {
-        if (i !== row && j !== col && sudoku[i * 9 + j].digit == digit) return true;
+        if (i !== row && j !== col && sudoku[i * 9 + j].digit === digit) return true;
       }
     }
-
     return false;
   };
 
@@ -62,7 +61,6 @@ export default function DigitRecognition({ sudokuImg, onBack, onSolve }: Props) 
     <div className='m-4 grid grid-cols-9 place-content-center border-2 border-black'>
       {sudoku.map(({ digit, certain }, i) => {
         const row = Math.floor(i / 9), col = i % 9;
-
         return (
           <div
             key={i}
@@ -97,7 +95,7 @@ export default function DigitRecognition({ sudokuImg, onBack, onSolve }: Props) 
         BACK
       </button>
       <button
-        onClick={onSolve}
+        onClick={() => onSolve && onSolve(sudoku.map(({digit}) => digit))}
         disabled={hasCollision}
         className={`transition-all duration-200 mt-4 focus:outline-none focus:ring-4 focus:ring-blue-300 px-8 
                     py-4 font-bold text-sm bg-blue-500 disabled:bg-blue-400 text-white rounded-r-full shadow-xl 
