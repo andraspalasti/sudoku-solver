@@ -11,7 +11,7 @@ export default function Localizer({ onScan }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Stores an inference result
-  const {prob, location, cropSudoku} = useSudokuLocalizer(videoRef.current);
+  const {prob, location, startProcessing, cropSudoku} = useSudokuLocalizer();
   const isPresent = 0.95 < prob;
   const [x1, y1, x2, y2] = location;
 
@@ -33,12 +33,15 @@ export default function Localizer({ onScan }: Props) {
 
     // When stream is available start it in the video element
     videoRef.current.srcObject = stream;
+    videoRef.current.play();
+
+    startProcessing(videoRef.current);
 
     // Unregister webcam if component unmounts
     return () => {
       stream.getTracks()[0].stop();
     };
-  }, [stream]);
+  }, [videoRef, stream, startProcessing]);
 
   if (!stream) {
     return <div className='h-screen flex justify-center items-center p-4 sm:p-8'>

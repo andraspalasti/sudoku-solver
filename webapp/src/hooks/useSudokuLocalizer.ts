@@ -11,7 +11,7 @@ type LocalizerResult = {
 
 const FPS = 5;
 
-export default function useSudokuLocalizer(video: HTMLVideoElement | null) {
+export default function useSudokuLocalizer() {
   const timeoutId = useRef<NodeJS.Timeout | null>(null);
   const canvasRef = useRef(document.createElement('canvas'));
 
@@ -26,9 +26,7 @@ export default function useSudokuLocalizer(video: HTMLVideoElement | null) {
     converted: new cv.Mat(),
   });
 
-  const processFrame = useCallback(async () => {
-    if (!video) return;
-    console.log('processed')
+  const processFrame = useCallback(async (video: HTMLVideoElement) => {
     const { img, resized, gray, converted } = resources.current;
 
     const ctx = canvasRef.current.getContext('2d', { willReadFrequently: true });
@@ -47,7 +45,7 @@ export default function useSudokuLocalizer(video: HTMLVideoElement | null) {
       location: [x1, y1, x2, y2],
       prob: classification.data[0] as number,
     });
-  }, [localizer, video]);
+  }, [localizer]);
 
   const cropSudoku = useCallback((padding = 0) => {
     const [x1, y1, x2, y2] = result.location;
@@ -60,39 +58,32 @@ export default function useSudokuLocalizer(video: HTMLVideoElement | null) {
     return img.roi(boundingRect);
   }, [result.location])
 
-  useEffect(() => {
-    function onPlay() {
-      if (!video) return;
-      if (!(video.srcObject instanceof MediaStream)) return;
+  const startProcessing = useCallback((video: HTMLVideoElement) => {
+    if (!(video.srcObject instanceof MediaStream)) return;
 
-      console.log('onplay')
+    const track = video.srcObject.getVideoTracks()[0];
+    const { width, height } = track.getSettings();
 
-      // const track = video.srcObject.getVideoTracks()[0];
-      // const { width, height } = track.getSettings();
+    canvasRef.current.width = width!;
+    canvasRef.current.height = height!;
+    resources.current = {
+      img: new cv.Mat(width, height, cv.CV_8UC4),
+      resized: new cv.Mat(SUDOKU_IMG_HEIGHT, SUDOKU_IMG_WIDTH, cv.CV_8UC4),
+      gray: new cv.Mat(SUDOKU_IMG_HEIGHT, SUDOKU_IMG_WIDTH, cv.CV_8UC1),
+      converted: new cv.Mat(SUDOKU_IMG_HEIGHT, SUDOKU_IMG_WIDTH, cv.CV_32F),
+    };
 
-      canvasRef.current.width = video.videoWidth;
-      canvasRef.current.height = video.videoWidth;
-      resources.current = {
-        img: new cv.Mat(video.videoWidth, video.videoWidth, cv.CV_8UC4),
-        resized: new cv.Mat(SUDOKU_IMG_HEIGHT, SUDOKU_IMG_WIDTH, cv.CV_8UC4),
-        gray: new cv.Mat(SUDOKU_IMG_HEIGHT, SUDOKU_IMG_WIDTH, cv.CV_8UC1),
-        converted: new cv.Mat(SUDOKU_IMG_HEIGHT, SUDOKU_IMG_WIDTH, cv.CV_32F),
-      };
-
-      const process = () => {
-        const start = performance.now();
-        processFrame();
-        const delay = 1000 / FPS - (performance.now() - start);
-        timeoutId.current = setTimeout(process, delay);
-      }
-      process();
+    const process = () => {
+      const start = performance.now();
+      processFrame(video);
+      const delay = 1000 / FPS - (performance.now() - start);
+      timeoutId.current = setTimeout(process, delay);
     }
+    process();
+  }, [processFrame]);
 
-    video?.addEventListener('play', onPlay);
-
+  useEffect(() => {
     return () => {
-      video?.removeEventListener('play', onPlay)
-
       const { img, resized, gray, converted } = resources.current;
       if (!img.isDeleted()) {
         img.delete();
@@ -103,10 +94,11 @@ export default function useSudokuLocalizer(video: HTMLVideoElement | null) {
 
       if (timeoutId.current) clearTimeout(timeoutId.current);
     };
-  }, [processFrame, video]);
+  }, []);
 
   return {
     ...result,
     cropSudoku,
+    startProcessing,
   }
 }

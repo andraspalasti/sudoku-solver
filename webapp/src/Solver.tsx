@@ -61,7 +61,6 @@ export default function Solver({puzzle, onAgain, onBack }: Props) {
       .map((_, i) => puzzle.slice(i * 9, (i + 1) * 9));
     return solve(copy)?.flat();
   }, [puzzle]);
-  console.log(solution);
 
   if (!solution) {
     return <div className='h-screen flex flex-col justify-center items-center p-4 sm:p-8'>
