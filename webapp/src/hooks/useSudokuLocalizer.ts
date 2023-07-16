@@ -28,6 +28,7 @@ export default function useSudokuLocalizer(video: HTMLVideoElement | null) {
 
   const processFrame = useCallback(async () => {
     if (!video) return;
+    console.log('processed')
     const { img, resized, gray, converted } = resources.current;
 
     const ctx = canvasRef.current.getContext('2d', { willReadFrequently: true });
@@ -63,6 +64,8 @@ export default function useSudokuLocalizer(video: HTMLVideoElement | null) {
     function onPlay() {
       if (!video) return;
       if (!(video.srcObject instanceof MediaStream)) return;
+
+      console.log('onplay')
 
       // const track = video.srcObject.getVideoTracks()[0];
       // const { width, height } = track.getSettings();
