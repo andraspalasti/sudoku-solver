@@ -26,7 +26,7 @@ export function ORTContextProvider({ children }: { children: any }) {
       .then((session) => setOrtContext((ctx) => ({...ctx, localizer: session})))
       .catch((e) => console.error(e));
 
-    ort.InferenceSession.create('./digitclassifier.with_runtime_opt.ort', { executionProviders: ['cpu'] })
+    ort.InferenceSession.create('./digitclassifier.with_runtime_opt.ort', { executionProviders: ['webgl', 'cpu'] })
      .then((session) => setOrtContext((ctx) => ({...ctx, classifier: session})))
      .catch((e) => console.error(e));
   }, []);
