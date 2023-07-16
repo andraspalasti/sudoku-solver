@@ -74,7 +74,6 @@ export default function useDigitRecognition(img: cv.Mat) {
     const thresh = threshold(img);
     const warped = warpPerspective(thresh);
     removeLines(warped);
-    cv.imshow('out', warped);
 
     // Collect data into one buffer so we can pass it to a tensor
     const buffer = new Float32Array(9 * 9 * IMG_SIZE);

@@ -56,7 +56,7 @@ export default function DigitRecognition({ sudokuImg, onBack, onSolve }: Props) 
 
   return <div className='flex flex-col justify-center items-center p-4 sm:p-8'>
     <p className='m-4 text-xl text-center font-normal text-gray-500'>
-      Is this your sudoku? If not edit the digits accordingly.
+      Is this your sudoku? If not, edit the digits accordingly.
     </p>
     <div className='m-4 grid grid-cols-9 place-content-center border-2 border-black'>
       {sudoku.map(({ digit, certain }, i) => {
@@ -73,9 +73,9 @@ export default function DigitRecognition({ sudokuImg, onBack, onSolve }: Props) 
               type='text'
               inputMode='numeric'
               value={digit !== 0 ? digit : ''}
-              className={`w-full h-full text-center focus:outline-none 
+              className={`w-full h-full text-center focus:outline-none text-xl
               ${doesCollide(row, col) ? 'bg-red-400' : (certain ? '' : 'bg-yellow-400')}`}
-              onChange={(e: any) => {
+              onChange={(e) => {
                 const n = parseInt(e.target.value);
                 const d = (Number.isNaN(n) ? 0 : n) % 10;
                 setSudoku(sudoku.map((square, j) => i === j ? ({ digit: d, certain: true }) : square));

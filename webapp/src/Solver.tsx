@@ -93,7 +93,7 @@ export default function Solver({puzzle, onAgain, onBack }: Props) {
             className={`aspect-square border border-black rounded-0 flex justify-center items-center
             ${row % 3 == 0 ? 'border-t-2' : ''} ${col % 3 == 0 ? 'border-l-2' : ''}
             ${row % 3 == 2 ? 'border-b-2' : ''} ${col % 3 == 2 ? 'border-r-2' : ''}
-            ${isFixed ? 'text-black font-bold' : 'text-gray-500 font-semibold'}`}
+            ${isFixed ? 'text-black font-bold text-lg' : 'text-gray-600 font-light text-2xl'}`}
           >
             <p>{digit}</p>
           </div>

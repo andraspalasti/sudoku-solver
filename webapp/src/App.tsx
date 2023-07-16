@@ -43,30 +43,31 @@ export default function App() {
   const [state, dispatch] = useReducer(reducer, { type: 'scanning' });
 
   return <ORTContextProvider>
-    <canvas id='out'></canvas>
-    {(() => {
-      switch (state.type) {
-        case 'scanning':
-          return <Localizer
-            onScan={(img) => {
-              const copy = new cv.Mat();
-              img.copyTo(copy);
-              dispatch({ type: 'scan', img: copy });
-            }}
-          />;
-        case 'recognising':
-          return <DigitRecognition
-            sudokuImg={state.img}
-            onBack={() => dispatch({ type: 'back' })}
-            onSolve={(puzzle) => dispatch({ type: 'solve', puzzle })}
-          />;
-        case 'solving':
-          return <Solver
-            puzzle={state.puzzle}
-            onBack={() => dispatch({ type: 'back' })}
-            onAgain={() => dispatch({type: 'again'})}
-          />;
-      }
-    })()}
+    <div className='w-full sm:w-2/3 md:w-2/3 lg:w-1/2 mx-auto'>
+      {(() => {
+        switch (state.type) {
+          case 'scanning':
+            return <Localizer
+              onScan={(img) => {
+                const copy = new cv.Mat();
+                img.copyTo(copy);
+                dispatch({ type: 'scan', img: copy });
+              }}
+            />;
+          case 'recognising':
+            return <DigitRecognition
+              sudokuImg={state.img}
+              onBack={() => dispatch({ type: 'back' })}
+              onSolve={(puzzle) => dispatch({ type: 'solve', puzzle })}
+            />;
+          case 'solving':
+            return <Solver
+              puzzle={state.puzzle}
+              onBack={() => dispatch({ type: 'back' })}
+              onAgain={() => dispatch({ type: 'again' })}
+            />;
+        }
+      })()}
+    </div>
   </ORTContextProvider>;
 }
