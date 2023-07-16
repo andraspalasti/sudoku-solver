@@ -22,11 +22,12 @@ export function ORTContextProvider({ children }: { children: any }) {
   }>({});
 
   useEffect(() => {
-    ort.InferenceSession.create('sudoku-solver/localizer.with_runtime_opt.ort', { executionProviders: ['webgl', 'cpu'] })
+    const url = window.location.href;
+    ort.InferenceSession.create(`${url}/localizer.with_runtime_opt.ort`, { executionProviders: ['webgl', 'cpu'] })
       .then((session) => setOrtContext((ctx) => ({...ctx, localizer: session})))
       .catch((e) => console.error(e));
 
-    ort.InferenceSession.create('sudoku-solver/digitclassifier.with_runtime_opt.ort', { executionProviders: ['webgl', 'cpu'] })
+    ort.InferenceSession.create(`${url}/digitclassifier.with_runtime_opt.ort`, { executionProviders: ['webgl', 'cpu'] })
      .then((session) => setOrtContext((ctx) => ({...ctx, classifier: session})))
      .catch((e) => console.error(e));
   }, []);
