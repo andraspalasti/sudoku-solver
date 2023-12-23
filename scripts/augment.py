@@ -2,12 +2,12 @@ import argparse
 import random
 from pathlib import Path
 
+import albumentations as A
 import cv2
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
 from PIL import Image, ImageOps
-import albumentations as A
+from tqdm import tqdm
 
 transform = A.Compose([
     A.OneOf([

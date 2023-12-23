@@ -1,17 +1,15 @@
 from pathlib import Path
 from typing import Tuple
 
-import numpy as np
 import torch
 import torch.nn.functional as F
-from PIL import Image, ImageDraw
 from torch import Tensor, optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 import wandb
 from localizer.dataset import SudokuDataset
-from localizer.evalutate import evaluate, corners_to_mask
+from localizer.evalutate import corners_to_mask, evaluate
 from localizer.model import Localizer
 
 SUDOKUS_DIR = Path(__file__).parent.parent / 'data' / 'sudokus'
@@ -142,7 +140,7 @@ if __name__ == '__main__':
         train_model(
             model=model,
             epochs=60,
-            batch_size=15,
+            batch_size=10,
             learning_rate=0.001,
             device=device,
         )
