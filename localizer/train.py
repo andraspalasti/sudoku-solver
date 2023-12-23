@@ -67,6 +67,9 @@ def train_model(
     optimizer = optim.RMSprop(model.parameters(), lr=learning_rate, foreach=True)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=5, factor=0.5)
 
+    # Freeze mobilenet weights for first 5 epochs
+    model.freeze()
+
     # Begin training
     global_step = 0
     for epoch in range(1, epochs + 1):
@@ -118,6 +121,7 @@ def train_model(
         })
 
         if epoch % 5 == 0:
+            model.unfreeze() # Unfreeze weights so that anything can be updated
             CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
             state_dict = model.state_dict()
             torch.save(state_dict, str(CHECKPOINT_DIR / f'localizer_epoch{epoch}.pth'))

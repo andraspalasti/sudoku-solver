@@ -18,12 +18,29 @@ class Localizer(nn.Module):
 
         self.expand = nn.Conv2d(in_channels=1, out_channels=3, kernel_size=1)
 
+        self.__freezed = False
         self.backbone = mobilenet.features
         self.last_channel = mobilenet.last_channel
 
         self.localizer = nn.Linear(self.last_channel, 1+4*2)
-        # self.localizer.weight.data += 0.005
+
+        # weights = list(self.localizer.weight[1:].split(split_size=1))
+        # for i, (xW, yW) in enumerate(zip(weights[::2], weights[1::2])):
+            # print(i, xW.shape, yW.shape)
+        # self.localizer.weight.data += 0.001
         # nn.init.kaiming_normal_(self.localizer.weight, nonlinearity='relu')
+
+    def freeze(self):
+        if self.__freezed: return
+        self.__freezed = True
+        for param in self.backbone.parameters():
+            param.requires_grad = False
+
+    def unfreeze(self):
+        if not self.__freezed: return
+        self.__freezed = False
+        for param in self.backbone.parameters():
+            param.requires_grad = True
 
     def forward(self, x: Tensor) -> Tuple[Tensor, Tensor]:
         x = self.expand(x)
@@ -47,6 +64,7 @@ if __name__ == '__main__':
 
     img, _ = train_set[0]
     img = img.reshape((1, 1, 224, 224))
+    # img = (img - 0.5367787160068429) / 0.12944043373444886
 
     model = Localizer()
     model.eval()
