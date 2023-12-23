@@ -1,17 +1,17 @@
-import os
 from pathlib import Path
 from typing import Tuple
 
+import numpy as np
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
+from PIL import Image, ImageDraw
 from torch import Tensor, optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 import wandb
 from localizer.dataset import SudokuDataset
-from localizer.evalutate import corners_to_box, evaluate
+from localizer.evalutate import evaluate, corners_to_mask
 from localizer.model import Localizer
 
 SUDOKUS_DIR = Path(__file__).parent.parent / 'data' / 'sudokus'
@@ -65,7 +65,7 @@ def train_model(
 
     # TODO: Resaearch optimizers
     optimizer = optim.RMSprop(model.parameters(), lr=learning_rate, foreach=True)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=5)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=5, factor=0.5)
 
     # Begin training
     global_step = 0
@@ -101,19 +101,18 @@ def train_model(
         # Evaluation round
         val_score = evaluate(model, val_loader, device)
         scheduler.step(val_score)
-        min_x, min_y, max_x, max_y = corners_to_box(preds[1][0]).cpu().tolist()
+
+        width, height = images[0].shape[-1], images[0].shape[-2]
+        wandb_images = [wandb.Image(image.cpu(), masks={
+            'predictions': {
+                'mask_data': corners_to_mask(corners, size=(width, height)),
+                'class_labels': {0: 'background', 1: 'sudoku'}
+            }
+        }) for image, corners in zip(torch.split(images, 1), torch.split(preds[1], 1))]
         experiment.log({
             'learning rate': optimizer.param_groups[0]['lr'],
             'validation iou': val_score,
-            'images': wandb.Image(images[0].cpu(), boxes={
-                'predictions': {
-                    'box_data': [{
-                        'position': {'minX': min_x, 'maxX': max_x, 'minY': min_y, 'maxY': max_y},
-                        'box_caption': 'sudoku',
-                        'class_id': 0,
-                    }]
-                }
-            }),
+            'images': wandb_images,
             'step': global_step,
             'epoch': epoch,
         })
@@ -138,8 +137,8 @@ if __name__ == '__main__':
     try:
         train_model(
             model=model,
-            epochs=40,
-            batch_size=5,
+            epochs=60,
+            batch_size=15,
             learning_rate=0.001,
             device=device,
         )
